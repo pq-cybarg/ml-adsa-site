@@ -38,7 +38,7 @@ Construction-F parameters (epoch-tree height `H_tree`; PRF/H/MTH = SHAKE-256 wit
 **Gap:** no ML-ADSA-44/65 (Cat 2/3) variants — straightforward to instantiate (same construction over
 those param sets) but not built/tested. **Aggregate sizes:** `σ*` is **4627 B constant in committee
 size N** (the whole point); `pk*` 2592 B; plus `aggregation_bits` (⌈N/8⌉ B) and amortized provenance
-on audit. (Contrast the status-quo qrysm list: up to 128×4627 ≈ 578 KB.)
+on audit. (Contrast the status-quo qrysm list: up to 128×4627 ≈ 592 KB (592,256 B).)
 
 ## 3. Known-Answer Tests / validation vectors
 
@@ -65,7 +65,7 @@ ML-ADSA (docs/25, `kat_test.go`):
 | assumptions | MLWE + SelfTargetMSIS, Fiat-Shamir-with-aborts | same + PRF + CR-hash (for refresh/provenance) — **no new hardness vs ML-DSA** |
 | (Q)ROM | cited (KLS18); not in the FIPS text | **machine-checked** QROM (EasyPQC): Construction-A tight `qrom_eufcma_uncond`; Construction-B lossy/named |
 | param justification | core-SVP in the Dilithium spec | **inherited verbatim** (no param change) ⇒ same core-SVP/Cat-5 |
-| validation | **CAVP/ACVP** (prerequisite for FIPS 140-3) | **none** (research scheme); base inherits ACVP via CIRCL/go-qrllib; code-level Gobra proofs + 24 algorithm proofs + KATs are stronger-than-typical evidence but are **not** CAVP validation |
+| validation | **CAVP/ACVP** (prerequisite for FIPS 140-3) | **none** (research scheme); base inherits ACVP via CIRCL/go-qrllib; code-level Gobra proofs + 29 algorithm proofs (134 lemmas) + KATs are stronger-than-typical evidence but are **not** CAVP validation |
 | independent review | NIST process | **required, not yet done** (stated in docs/18 §5, docs/21 §8) |
 
 ## 5. Gap summary — what a NIST-grade ML-ADSA spec would still need

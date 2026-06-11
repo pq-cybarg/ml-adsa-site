@@ -1,5 +1,7 @@
 # LMSA — Assessment of the v0.3–v0.14 ("keep pushing") line
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 Verdict: **no new construction.** Stripped of framing, every version is the same two
 objects already rejected — an **argument of knowledge** (renamed "correction proof",
 "disjunctive argument", "zk component") plus a **Module-SIS cross-term commitment** —

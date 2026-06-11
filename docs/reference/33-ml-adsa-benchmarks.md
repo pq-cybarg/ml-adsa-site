@@ -69,6 +69,7 @@ This is the BLS-like win: constant signature size and constant verification, ind
 
 | Committee N | list size | ML-ADSA | reduction |
 |---:|---:|---:|---:|
+| 8 | 37,016 B | 4,627 B | 8× |
 | 16 | 74,032 B | 4,627 B | 16× |
 | 64 | 296,128 B | 4,627 B | 64× |
 | 128 (max) | 592,256 B | 4,627 B | **128×** |

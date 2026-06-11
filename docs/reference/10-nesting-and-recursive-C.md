@@ -1,5 +1,7 @@
 # Nesting / recursion, buffering, and the deep (C) architecture
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 ## 1. Does nesting extend total aggregation? Only where the norm is *refreshed*.
 A nested ("tree") aggregate helps **iff** each layer compresses without inheriting the
 previous layer's growth. That happens only in a **proof system**:

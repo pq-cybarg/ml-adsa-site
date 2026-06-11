@@ -1,5 +1,7 @@
 # LMSA — Forward/Backward Analysis of ML-DSA-87 Aggregation
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 > Goal: determine, from first principles (not by citation), whether many independent
 > ML-DSA-87 signatures can be combined into one object accepted by the **standard
 > ML-DSA verifier**, while remaining unforgeable and granting no power beyond the

@@ -1,5 +1,7 @@
 # MLADSA — Masking / Zero-Knowledge Analysis (the real secure-cohort limiter)
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 Goal: replace the earlier hand-waved "secure cohort ≈ tens / ≈ hundreds" with a precise,
 *measured* statement. The headline correction: **leakage is a property of the rejection
 model, not a simple ratio.** With the right model the aggregate `z*` is secret-independent

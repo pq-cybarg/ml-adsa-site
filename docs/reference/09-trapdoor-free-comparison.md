@@ -1,5 +1,7 @@
 # Trapdoor-free scaling: head-to-head comparison
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 All options here are **trapdoor-free and transparent** (no CRS, no toxic waste, no
 secret-holder) and **zero-leakage** (Model-1 rejection or a ZK proof) — so the comparison is
 purely on *size / verifier / cohort / coordination / cost*, not on trust. Numbers are

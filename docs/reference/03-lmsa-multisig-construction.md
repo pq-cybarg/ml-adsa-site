@@ -1,5 +1,7 @@
 # LMSA — Aggregate that verifies under the UNMODIFIED ML-DSA-87 verifier
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 Goal met here: from N signers, produce **one** `σ* = (c̃*, z*, h*)` under an aggregate
 key `pk* = (ρ, t1*)` on message `M` such that the **standard, byte-identical FIPS-204
 ML-DSA-87 Verify accepts it**, it is **unforgeable**, and its signing power is **exactly

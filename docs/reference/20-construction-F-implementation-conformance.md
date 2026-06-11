@@ -63,16 +63,17 @@ signed message (`bindMsg`), so `c̃*` binds `part_root` (§6.4). `P ⊆ REG` is 
 
 ## 3. Honest epistemic boundary (not overclaimed)
 
-- **What is proven (machine-checked):** the *algorithm/math* — 23 Rocq/EasyCrypt/EasyPQC artifacts,
-  24/24 genuineness, zero admits (docs/18).
+- **What is proven (machine-checked):** the *algorithm/math* — 29 Rocq/EasyCrypt/EasyPQC artifacts,
+  33/33 genuineness, zero admits (docs/18).
 - **What is validated (measured):** the *Go code* realizes that algorithm — every layer round-trips
   and, where a signature is produced, the **independent Cloudflare CIRCL** ML-DSA-87 verifier accepts
   it and rejects tampering (this §1 test column). This is the field-standard for implementation
   correctness.
-- **What is NOT claimed:** a *code-level formal proof* of the Go itself (that requires a Go verifier
-  such as Gobra and is out of scope, per docs/17 §10 / docs/12). The refinement map + CIRCL +
+- **What is NOT claimed:** a *full code-level formal proof* of the Go itself. Code-level formal
+  proofs now partly exist — delivered via Gobra (6 theorems, docs/22); the lattice arithmetic
+  remains named-primitive + CIRCL-measured (per docs/17 §10 / docs/12). The refinement map + CIRCL +
   property tests are the bridge between the proven algorithm and the running code — they are strong
-  evidence, not a Coq proof of the Go.
+  evidence, complementing (not replacing) the Gobra code-proofs.
 - **Two routines, by design:** `AggregateRejfree`/`AggregateM1` (L0, random nonce, fixed keys) remain
   as the proven *base* (F-C1/F-C3) and back the original tests; `AggregateF` is the full Construction
   F (L0 core + L1–L4) and is what a deployment uses. Both are CIRCL-verified.

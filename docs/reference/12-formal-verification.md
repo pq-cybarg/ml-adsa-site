@@ -1,5 +1,7 @@
 # ML-ADSA — Formal Verification: complete property map, status, and plan
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 This maps **every** desirable property and **every** unwanted property to a precise formal
 statement, the right tool, and an honest status. The cardinal rule here: a property is only
 marked **MACHINE-CHECKED** if a prover actually verified it in this repo. Everything else is

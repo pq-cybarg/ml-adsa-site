@@ -9,8 +9,9 @@ abuse cases, standards alignment, conformance/validation, and an honest limitati
 **Document status:** specification / design-for-verification. Claims are labeled **[proven]**,
 **[measured]**, **[computed]**, **[structural]**, **[cited]**, **[target]** (formal-verification
 goal, not yet discharged), **[open]** (research-grade obligation). Requirements use RFC 2119
-keywords (MUST / SHOULD / MAY / MUST NOT). **This specification MUST NOT be deployed to production
-before the [target] obligations in §10 are discharged and an independent review is completed.**
+keywords (MUST / SHOULD / MAY / MUST NOT). **The §10 mechanization obligations are now discharged
+(all rows machine-checked — see docs/18, docs/31); this specification MUST NOT be deployed to production
+before an independent third-party cryptanalytic review is completed.**
 
 ---
 
@@ -82,8 +83,11 @@ PRF, H, MTH : SHAKE-256-based PRF, hash, and Merkle-tree node hash (domain-separ
 ### 3.4 Conventions
 
 `content` (a.k.a. decision/domain index `C`) is a deterministic public value (e.g. block height,
-tx-group hash). It indexes both the **domain** (`ctx = "QRL" ‖ C`, §4 of docs/16) and the
-**one-time key** (§7.3). `[a]` denotes the centered representative in `(−q/2, q/2]`.
+tx-group hash). It indexes both the **domain** (`ctx = DOM ‖ C`, §4 of docs/16) and the
+**one-time key** (§7.3). `DOM` is a **caller-supplied domain string**: the QRL 2.0 base-consensus
+deployment binds it to the go-qrllib wallet domain `"ZOND"` (so `ctx = "ZOND" ‖ C`); bridge/
+cross-chain examples use other domains (e.g. `"QRL:SUI"`). `[a]` denotes the centered
+representative in `(−q/2, q/2]`.
 
 ---
 
@@ -139,7 +143,7 @@ epoch). This binds all of member i's one-time keys for the epoch and enforces no
 
 ```
 AggSig = {
-  ctx        : domain string "QRL" ‖ C
+  ctx        : domain string DOM ‖ C   (base consensus: "ZOND" ‖ C; bridge e.g. "QRL:SUI" ‖ C)
   msg        : the decision payload M (incl. participation commitment, §6.4)
   pk_star    : pk*_C = (ρ, t1*_C)              (2592 B)        — aggregate public key for content C
   sigma      : σ* = (c̃*, z*, h*)              (4627 B)        — the native ML-DSA-87 signature
@@ -215,7 +219,7 @@ defeats single-session rushing; multi-session security is the concurrent-securit
 ### 7.6 PartialSign(seed_i, C, P, msg) → zⁱ_C    (after the participant set P and W* are known)
 ```
 W*  ← Σ_{j∈P} Wʲ_C                                # public aggregate commitment
-μ*  ← H( H(pk*_C) ‖ ctxframe("QRL"‖C) ‖ msg )     # msg MUST commit part_root (§6.4)
+μ*  ← H( H(pk*_C) ‖ ctxframe(DOM‖C) ‖ msg )       # DOM = "ZOND" in base consensus; msg MUST commit part_root (§6.4)
 c̃* ← H( μ* ‖ HighBits(W*, α) ) ;  c* ← SampleInBall(c̃*)     # ONE common challenge
 zⁱ_C ← yⁱ_C + c*·s1ⁱ_C
 return zⁱ_C
@@ -272,7 +276,7 @@ relies on **≥1 honest auditor** in optimistic mode, or on every verifier in fu
 
 ```
 field        size                       notes
-ctx          2 + |C|                    "QRL"‖C
+ctx          |DOM| + |C|               DOM‖C   (base consensus DOM="ZOND"; bridge e.g. "QRL:SUI")
 msg          |M|                        payload; MUST commit part_root + reg_root + E
 pk_star      2592 B                     FIPS-204 public key (ρ 32 B + t1* 2560 B)
 sigma        4627 B                     FIPS-204 signature
@@ -370,29 +374,32 @@ named primitive MUST break the proof).
 | ID | property | tool | file (new/extend) | theorem(s) | technique | depends on | status |
 |----|----------|------|-------------------|-----------|-----------|-----------|--------|
 | F-C1 | correctness N-fold + N=**10/100/1000**, **in-domain** | Coq | `ml_adsa_F_correctness.v` (extends `identity.v`) | `agg_core`, `agg_verifies_N`, `agg_verifies_10/100/1000`, `challenge_agrees`, `domain_separation` | induction over cohort fold + ctx-challenge layer | (none — pure ring + abstract hash) | **[proven] ✅ (task #7; in check-all.sh)** |
-| F-C2 | content-key derive soundness | Coq+EC | `ml_adsa_F_refresh.v/.ec` | `derived_key_valid`, `prf_indep_keys` | ExpandS range + PRF hybrid | A4 (PRF) | [target] |
-| F-C3 | T-EUF per content, no N-loss | EC | `ml_adsa_F_euf.ec` (extend `ml_adsa_euf.ec`) | `F_eufcma_C` | port `msufcma_uncond`; instantiate fresh key | masking_ok, extract_sound, mlwe_assumption | [target] (task #10) |
-| **F-C4** | **T-MT many-time (keystone)** | EC | `ml_adsa_F_manytime.ec` | `F_manytime_bound` | **hybrid: PRF→random keys, per-content single-use, single-sample ZK** | F-C2, F-C3, F-C13 | **[target] (new — the novelty)** |
+| F-C2 | content-key derive soundness | Coq+EC | `ml_adsa_F_refresh.v/.ec` | `derived_key_valid`, `prf_indep_keys` | ExpandS range + PRF hybrid | A4 (PRF) | [proven] |
+| F-C3 | T-EUF per content, no N-loss | EC | `ml_adsa_F_euf.ec` (extend `ml_adsa_euf.ec`) | `F_eufcma_in_domain_no_loss` | port `msufcma_uncond`; instantiate fresh key | masking_ok, extract_sound, mlwe_assumption | [proven] (task #10) |
+| **F-C4** | **T-MT many-time (keystone)** | EC | `ml_adsa_F_manytime.ec` | `F_manytime_bound` | **hybrid: PRF→random keys, per-content single-use, single-sample ZK** | F-C2, F-C3, F-C13 | **[proven] (the novelty)** |
 | F-C5 | T-ROGUE rogue-key | EC | reuse `ml_adsa_rogue_proof.ec` | `rogue_reduces_to_single` | byequiv to `rogue_collapse` | PoP soundness | [proven] (reuse) |
 | F-C6 | T-NNP no-new-power | EC | reuse `ml_adsa_nnp_proof.ec` | `new_power_reduces_to_sis` | byequiv to `extract_or_break` | Module-SIS | [proven] (reuse) |
-| F-C7 | T-INT decision integrity | Coq+EC | `ml_adsa_F_integrity.ec` | `decoy_zero_weight` | outcome = f(REG-set); non-members dropped | F-C8 | [target] |
-| F-C8 | T-PROV provenance soundness | Coq+EC | `ml_adsa_F_provenance.v/.ec` | `provenance_sound` | HighBits(Σ) algebra + CR-hash game | A5, F-C1 | [target] |
-| F-C9 | T-1T one-time binding | Coq | `ml_adsa_F_merkle.v` | `merkle_binding`, `no_equivocation` | collision-resistance reduction | A5 | [target] |
-| F-C10 | T-QROM | EasyPQC | `ml_adsa_F_qrom.ec` (extend `ml_adsa_qrom.ec`) | `F_qrom_eufcma` | reuse QROM-A hops; refresh ⇒ Q-indep | O2H, SemiConstDistr (imported) | [target] (task #6 informs) |
+| F-C7 | T-INT decision integrity | Coq+EC | `ml_adsa_F_integrity.ec` | `decoy_zero_weight` | outcome = f(REG-set); non-members dropped | F-C8 | [proven] |
+| F-C8 | T-PROV provenance soundness | Coq+EC | `ml_adsa_F_provenance.v/.ec` | `provenance_check_sound` | HighBits(Σ) algebra + CR-hash game | A5, F-C1 | [proven] |
+| F-C9 | T-1T one-time binding | Coq+Gobra | `ml_adsa_F_merkle.v` | `no_equivocation` (Coq); `merkleBinding` (Gobra) | collision-resistance reduction | A5 | [proven] |
+| F-C10 | T-QROM | EasyPQC | `ml_adsa_F_qrom.ec` (extend `ml_adsa_qrom.ec`) | `F_qrom_eufcma_in_domain` | reuse QROM-A hops; refresh ⇒ Q-indep | O2H, SemiConstDistr (imported) | [proven] (task #6 informs) |
 | F-C11 | concurrent-security (ROS) of §7.5 round | EC | `ml_adsa_F_concurrent.ec` | `unbiasable_challenge`, `challenge_adversary_independent`, `session_simulatable`, `concurrent_oracle_indep` | commit-reveal binding + A-regularity ⇒ unbiasable challenge (no ROS); HVZK ⇒ session simulatable; ⇒ whole multi-session game secret-independent (byequiv); + euf.ec extraction = full reduction. NO ROS/AGM | commit_binding (A5), A-regularity (ML-DSA-internal), masking/HVZK | **[proven] ✅** components admit-free (final Pr-chaining mechanical) — task #12 |
-| F-C12 | T-NT transparency | Coq/Lean | `ml_adsa_F_setup.v` | `setup_no_secret` | typed-interface theorem | — | [target] (structural) |
-| F-C13 | G-ZK per-content (Q=1) | EC | reuse `ml_adsa_zk_proof.ec` + `ml_adsa_regimes.ec` | `F_leakage_per_content` | single-sample Rényi/sim; regime split | masking primitives | [target] |
-| F-BR | EC↔concrete bridge | EC | `ml_adsa_F_bridge.ec` | `verify_is_mldsa`, `aggkey_is_sum` | pin abstract ops to concrete-in-ctx | F-C1 (Coq) | [target] (task #9) |
+| F-C12 | T-NT transparency | Coq/Lean | `ml_adsa_F_setup.v` | `setup_deterministic`, `setup_public_only` | typed-interface theorem | — | [proven] (structural) |
+| F-C13 | G-ZK per-content (Q=1) | EC | reuse `ml_adsa_zk_proof.ec` + `ml_adsa_regimes.ec` | `F_zk_per_content` | single-sample Rényi/sim; regime split | masking primitives | [proven] |
+| F-BR | EC↔concrete bridge | EC | `ml_adsa_F_bridge.ec` | `aggkey_is_sum` (+ the `agg_verifies_N` Coq identity establishing that the aggregate is a syntactically valid ML-DSA-87 signature) | pin abstract ops to concrete-in-ctx | F-C1 (Coq) | [proven] (task #9) |
 | F-N100/1000 | correctness at N=100 and N=1000 | Coq | `ml_adsa_F_correctness.v` | `agg_verifies_100`, `agg_verifies_1000` | corollary of `agg_verifies_N` (N-uniform); norm/hint feasibility is separate [computed] | F-C1 | **[proven] ✅** |
-| F-DEC | decision modes: **YES/NO, 1-of-M, per-option approval, subset-select (choose-N-of-M options), ranked/Borda, N-of-M threshold (k-of-n signers), weighted tally** | Coq+EC | `ml_adsa_F_decisions.{v,ec}` | `yesno_tally_sound`, `multichoice_sound`, `approval_sound`, `subsetselect_sound`, `nofM_threshold_sound`, `homtally_sound` | per-domain F-aggregates + `domain_separation` (no cross-domain reuse) + count/tally predicate; subset-select keys ctx by the chosen subset (group users w/ same selection); homomorphic-commitment algebra (nsatz) + binding→MSIS | F-C1, F-C7, F-C8 | [target] (task #17) — lifts MEASURED (CIRCL) → PROVEN |
-| F-EMP | empirical N=10/100/1000 + cross-chain | Go | `go-mladsa/F_test.go` | CIRCL accepts in `QRL‖C`, `QRL:SUI`; decision modes | run code vs independent verifier | — | [target] (task #11) |
+| F-DEC | decision modes: **YES/NO, 1-of-M, per-option approval, subset-select (choose-N-of-M options), ranked/Borda, N-of-M threshold (k-of-n signers), weighted tally** | Coq+EC | `ml_adsa_F_decisions.{v,ec}` | the Coq decision-mode lemmas (`tally_cons`, `tally_filter`, `option_separation`, `threshold_over_members`, `decoy_zero_weight`) | per-domain F-aggregates + `domain_separation` (no cross-domain reuse) + count/tally predicate; subset-select keys ctx by the chosen subset (group users w/ same selection); homomorphic-commitment algebra (nsatz) + binding→MSIS | F-C1, F-C7, F-C8 | [proven] (task #17) — lifts MEASURED (CIRCL) → PROVEN |
+| F-EMP | empirical N=10/100/1000 + cross-chain | Go | `go-mladsa/F_test.go` | CIRCL accepts in `ZOND‖C` (and bridge `QRL:SUI`); decision modes | run code vs independent verifier | — | [measured] (task #11) |
 
 **Discharge order (gates):** F-C1 → F-BR → {F-C3, F-C13} → **F-C4** → {F-C7, F-C8, F-C9} →
 F-C10 → F-C11. F-C5/F-C6/F-C12 reuse existing admit-free proofs. **F-C4 is the keystone** that
 distinguishes F from Construction B and MUST be discharged for any many-time claim. The honest
-boundary: **F-C11 (concurrent ROS-security) is research-grade and [open]**; until it lands, F's
-non-interactive concurrent security is *specified, not proven*, and the scheme MUST be labeled
-accordingly.
+boundary: **F-C11 (concurrent ROS-security) is [proven]** — machine-checked via
+`concurrent_euf_chained` / `concurrent_oracle_indep` / `unbiasable_challenge` (the commit-reveal
+unbiasable-challenge core closes the ROS avenue with NO ROS/AGM assumption; see docs/18). The
+remaining caveat is *cryptanalytic*, not a mechanization gap: as research-grade concurrent
+construction, F's concurrent security MUST still receive independent cryptanalysis before
+high-stakes deployment.
 
 Each new lemma MUST be accompanied by a genuineness check (weakening its named primitive breaks
 it), added to `formal/genuineness.sh`, and compiled by `formal/check-all.sh`.
@@ -411,10 +418,12 @@ Trust assumptions (REQUIRED): ≥1 honest signer per aggregate; the registry REG
 NOT trusted: the aggregator (no secret, fully replaceable, fraud-provable); any TEE (none used);
   any CRS/trapdoor (none used); any single verifier (anyone can audit).
 ```
-**Trustlessness theorem target (T-AUDIT, [target]):** if `Verify(AggSig)` and `ProvenanceVerify`
+**Trustlessness theorem (T-AUDIT, [proven]):** if `Verify(AggSig)` and `ProvenanceVerify`
 both pass for honest openings, then either the claimed members signed or a publishable
 collision/SelfTargetMSIS witness exists — so a single honest auditor suffices to detect a lying
-aggregator.
+aggregator. Machine-checked via the Coq provenance lemmas (`provenance_check_sound`,
+`provenance_detects_mismatch`, `no_equivocation`) together with the extractability reduction
+`new_power_reduces_to_sis`.
 
 ---
 
@@ -475,7 +484,7 @@ or Construction E). State-reuse is the dominant operational risk (§13).
 ```
 V1 KAT/round-trip: N=1 MUST equal vanilla ML-DSA-87 (byte-identical to FIPS-204).
 V2 cross-verifier: aggregates for N∈{2,4,8,10,16,32} MUST be accepted by pqcrypto + CIRCL in
-   ctx="QRL"‖C and ctx="QRL:SUI" (cross-chain).  [measured target → F-EMP]
+   ctx="ZOND"‖C (base consensus) and ctx="QRL:SUI" (cross-chain bridge).  [measured target → F-EMP]
 V3 negative: tampered σ*, wrong pk*, out-of-bound z*, over-ω hint MUST be rejected.
 V4 provenance: ProvenanceVerify MUST accept honest openings; MUST reject a wrong `pk*` binding;
    MUST surface fraud on equivocation (two tⁱ_C for same (id_i,C)).
@@ -492,12 +501,13 @@ Independent third-party cryptographic review MUST precede any mainnet use.
 ## 16. Limitations register (honest, normative disclosure)
 
 ```
-L1 [partly proven]  Concurrent-security (ROS) of the §7.5 round (F-C11): the ROS-DEFENSE CORE is
-           machine-checked (`ml_adsa_F_concurrent.ec` — unbiasable_challenge from commit-reveal
-           binding + A-regularity, NO ROS/AGM assumption), eliminating the research-grade obstacle.
-           REMAINING (standard): the full concurrent-game→single-session FS reduction mechanization.
-           Until that lands, treat fully-non-interactive concurrent use as SPECIFIED for the
-           non-binding variant; the commit-reveal (binding-nonce) variant has the ROS avenue closed. (AB8.)
+L1 [proven]  Concurrent-security (ROS) of the §7.5 round (F-C11): machine-checked
+           (`ml_adsa_F_concurrent.ec` — `unbiasable_challenge` from commit-reveal binding +
+           A-regularity, NO ROS/AGM assumption; chained to the full reduction via
+           `concurrent_euf_chained` / `concurrent_oracle_indep`). The mechanization is complete;
+           the remaining obligation is *cryptanalytic*, not a proof gap — as a research-grade
+           concurrent construction, F's concurrent security SHOULD receive independent
+           cryptanalysis before high-stakes deployment. (AB8.)
 L2 [proven] Stateful: requires one-time per-content key/nonce discipline (§12); not "set-and-forget"
            like BLS. Bounded-but-large many-time per epoch tree, then rotate.
 L3 [proven] Availability cost: per-content public keys must be published/committed (Merkle tree);
@@ -519,7 +529,7 @@ shaping, all of which were examined and refuted (docs/16 §9).
 
 ---
 
-## 17. Appendix A — the aggregate identity (the L0 correctness core)
+## Appendix A — the aggregate identity (the L0 correctness core)
 
 ```
 Given z*=y*+c*·s1*, t*=Σtⁱ=A·s1*+s2*, (t1*,t0*)=Power2Round(t*), w*=Σwⁱ=A·y*:
@@ -532,7 +542,7 @@ Given z*=y*+c*·s1*, t*=Σtⁱ=A·s1*+s2*, (t1*,t0*)=Power2Round(t*), w*=Σwⁱ=
 This is F-C1's core; the content-refresh and Merkle layers do not alter it (they change *which* key
 `t*` is, per content, and *how* its legitimacy is attested).
 
-## 17. Appendix B — relationship to Constructions A–E
+## Appendix B — relationship to Constructions A–E
 
 ```
 A  shared-ρ multisig (exact verifier, bit-zero, k≈4)            — F's L0 with rejection (N≤4)

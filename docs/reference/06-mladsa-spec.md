@@ -1,5 +1,7 @@
 # MLADSA — Module-Lattice Aggregate DSA (the real, buildable scheme)
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 The aggregate is a **genuine ML-DSA-87 signature** under an aggregate key, accepted by the
 **unmodified** FIPS-204 verifier. No ZK argument, no correction δ, no "absorption into the
 hint," no compensator. Those only appear when one tries to avoid coordination; MLADSA pays

@@ -64,14 +64,17 @@ NTT. It is validated by byte-exact dual-reference equality against CIRCL + go-qr
 | Gobra (ETH, Docker) | `formal/gobra/` | 6 theorems | green |
 | Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **33** | 33/33 |
 
-Lemma tally: **72 admit-free EasyCrypt lemmas + 5 Coq theorems = 77 machine-checked**, plus 6 Gobra
-code-level theorems. (Artifact *file* count is 29; lemma count is 77 — both framings are used in the
-literature; do not conflate them.)
+Lemma tally: **102 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 134 machine-checked**, plus 6
+Gobra code-level theorems. (Artifact *file* count is 29; lemma count is 134 — both framings are used in
+the literature; do not conflate them. All figures are produced by `formal/count-artifacts.sh`, the single
+source of truth.)
 
-> **Discrepancy note (corrected here).** `docs/18` reports a stale "14 classical + 4 + 5 = 23 / 24-genuineness"
-> tally predating the addition of `ml_adsa_F_hiding.ec` and later lemmas. The authoritative current numbers
-> are those of `check-all.sh` (19 classical + 5 quantum + 5 Coq = 29) and `genuineness.sh` (33), matching
-> `docs/27`. `docs/18` should be updated to match.
+> **Discrepancy note.** Earlier prose used a deprecated lemma tally of "77 (= 72 EC + 5 Coq)", which
+> conflated *5 Coq files* with *5 Coq lemmas* (Coq has 32 lemmas/theorems) and predated the masking /
+> rounding / NTT / NTT-inversion / GHHM additions; older docs also quote stale artifact counts (23, 24).
+> The authoritative current numbers are those of `formal/count-artifacts.sh`: **29 artifacts**
+> (19 classical + 5 quantum + 5 Coq) and **134 lemmas** (102 EC + 32 Coq), with `genuineness.sh` at 33/33.
+> The cross-consistency audit `docs/35` reconciles every document to these.
 
 ---
 
@@ -187,7 +190,8 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 
 ```
 # Algorithm proofs (29 artifacts): EasyCrypt classical+QROM + Coq
-cd formal && zsh check-all.sh                 # → ALL GREEN (15 classical + 5 quantum + 5 Coq)
+cd formal && zsh check-all.sh                 # → ALL GREEN (19 classical + 5 quantum + 5 Coq = 29)
+zsh count-artifacts.sh                         # → 29 artifacts, 134 lemmas (102 EC + 32 Coq), 33/33, 6 Gobra
 zsh genuineness.sh                            # → 33/33 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)
 cd formal/gobra && zsh run.sh                 # → 6 theorems, "Gobra found 0 errors"; zsh genuineness.sh → 5/5

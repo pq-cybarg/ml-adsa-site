@@ -10,8 +10,8 @@ CIRCL/go-qrllib · **[named]** assumed primitive · **[—]** not applicable.
 
 ## 1. The three surfaces and how they relate
 
-- **Proofs** (`formal/`): the algorithm is verified abstractly — 24 machine-checked artifacts (15 EC +
-  4 EasyPQC + 5 Coq), 26/26 EC genuineness; plus **Gobra** code-level proofs of the structural logic
+- **Proofs** (`formal/`): the algorithm is verified abstractly — 29 machine-checked artifacts (19 EC +
+  5 EasyPQC + 5 Coq), 33/33 EC genuineness; plus **Gobra** code-level proofs of the structural logic
   (`formal/gobra/`, 6 theorems, 5/5 genuineness).
 - **Standalone Go** (`go-mladsa/`): the reference implementation; CIRCL-cross-checked; the KAT source of
   truth. `go test ./...` PASS.
@@ -43,7 +43,7 @@ independent FIPS-204 anchors (CIRCL, go-qrllib).
 | transparency / cross-chain | Coq `setup_public_only`,`key_indep_of_ctx` | `ExpandA(ρ)`,`ctx` | identical | — | **[proven]+[measured]** |
 | QROM (post-quantum) | EasyPQC `qrom_eufcma_uncond/_lossy`,`F_qrom` (F-C10) | (verify) | identical | — | **[proven]** (A tight; B lossy/named) |
 | validity verify (unmodified FIPS-204) | docs/17 §7.8 | `Verify` (+ H1/H2 length guard) | identical | all KATs | **[measured]** (CIRCL+go-qrllib) |
-| consensus aggregation (attestation) | — | — | `cmd/mladsa-devnet`, `AggregateF` | (devnet) | **[measured]** live (8/16/128×, all-agree); proto/SSZ wiring **[open]** |
+| consensus aggregation (attestation) | — | — | `cmd/mladsa-devnet`, `AggregateF` | (devnet) | **[measured]** live (8/16/128×, all-agree); proto/SSZ Phase-2 shrink **[implemented]** (docs/29) |
 
 ## 3. Completeness audit of the specification
 
@@ -75,7 +75,7 @@ fundamental/known, 3–6 are integration/hardening tracked in docs/23 and docs/2
 
 ```
 formal/check-all.sh            # proofs: 29 artifacts GREEN
-formal/genuineness.sh          # 26/26
+formal/genuineness.sh          # 33/33
 formal/gobra/run.sh + genuineness.sh   # Gobra: 6 theorems, 5/5
 cd go-mladsa && go test ./...                    # standalone (incl. TestKAT_*)
 cd qrl-integration/ml-adsa/qrysm && go test ./mladsa/   # qrysm (same KATs, go-qrllib)

@@ -98,3 +98,4 @@ nav:
     - H5 attestation migration: reference/29-h5-attestation-aggregation-migration.md
     - Implementation conformance: reference/20-construction-F-implementation-conformance.md
     - Optimization & constant-time: reference/34-optimization-and-constant-time.md
+    - Cross-consistency audit (+ Raccoon/Chipmunk comparison): reference/35-cross-consistency-audit.md

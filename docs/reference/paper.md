@@ -34,8 +34,9 @@ rogue-key resistance. We further prove that producing *any* member of the equiva
 signatures for a fixed `(pk*, m)` is as hard as a single ML-DSA forgery (no advantage from
 signature multiplicity), in ROM and QROM.
 
-The scheme is accompanied by **77 machine-checked proofs** (EasyCrypt classical and QROM, Coq, and
-Gobra code-level theorems), a reference implementation cross-validated against CIRCL and theQRL/go-qrllib,
+The scheme is accompanied by **134 machine-checked lemmas** (102 EasyCrypt + 32 Coq) across **29 prover
+artifacts** (19 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
+(tallies reproducible via `formal/count-artifacts.sh`), a reference implementation cross-validated against CIRCL and theQRL/go-qrllib,
 known-answer tests, and live multi-process demonstrations of decentralized aggregation and order/grouping
 independence. We discuss limitations — chiefly the need for independent cryptanalysis, additional
 parameter sets, and a fully derived tight-QROM bound for the lossy (rejection-free) construction variant.
@@ -114,15 +115,18 @@ lattice multi-signatures, letting us prove concurrent security with **no ROS/AGM
    ROM and QROM (§6.5).
 5. **Accountability layers** — an epoch Merkle key-tree (non-equivocation), registry + proof-of-possession
    (rogue-key resistance), and a ZKP-free decoy mechanism for signer-set privacy (§4, §8).
-6. **A reproducible assurance package**: 39 machine-checked proofs, a CIRCL/go-qrllib-anchored reference
-   implementation, KATs, and live decentralized demonstrations (§7, §9).
+6. **A reproducible assurance package**: 134 machine-checked lemmas across 29 prover artifacts (+6 Gobra
+   code-level theorems), a CIRCL/go-qrllib-anchored reference implementation, KATs, and live decentralized
+   demonstrations (§7, §9).
 
 ### 1.5 Honest scope
 
 ML-ADSA has not yet undergone independent third-party cryptanalysis, which we regard as the decisive gate
-for standardization. The QROM bound for the *rejection-free* (Construction B) variant currently imports the
-GHHM21 adaptive-reprogramming bound rather than deriving the distinct-per-query form in-prover; the
-perfect-masking (Construction A) variant is tight and unconditional. Parameter sets beyond Category 5
+for standardization. The QROM bound for the *rejection-free* (Construction B) variant **derives** the
+distinct-per-query GHHM21 adaptive-reprogramming form in-prover (`ml_adsa_qrom_ghhm.ec`, §6.6) from a
+proven per-round perfect resampling and the elementary distinct-query bound — it is no longer imported as
+the loose Zhandry semi-constant-distribution axiom (which is retained only as an independent cross-check);
+the perfect-masking (Construction A) variant is tight and unconditional. Parameter sets beyond Category 5
 (ML-ADSA-44/65) and ACVP-format vectors are defined but not yet produced. None of these affect the core
 claims; all are itemized in §10 and `docs/32`.
 
@@ -146,6 +150,22 @@ here.)
 DOTT, Damgård et al.) target a *single* aggregate key set up interactively; many rely on ROS/AGM/OMDL or
 on a key-aggregation round. ML-ADSA is non-interactive after a one-time registration, derives the
 aggregate key by public summation, and proves concurrent security without ROS/AGM.
+
+**Threshold Raccoon** [dPKM⁺24, CRYPTO 2024] is a `t`-of-`n` lattice *threshold* signature built on the
+masking-friendly Raccoon FSwA scheme: signers run a **3-round interactive** protocol to jointly produce one
+signature (≈13 KiB, independent of `n`, up to ~1024 parties) verified by a *new* Raccoon verifier under
+MLWE+MSIS. It answers a different question from ML-ADSA — a threshold over a *new* scheme requiring
+interaction and a distributed key — whereas ML-ADSA non-interactively aggregates *independent* ML-DSA-87
+signatures into a single **bona-fide FIPS-204 signature** the *unmodified* verifier accepts, with no
+threshold key, no interaction beyond one-time registration, and a constant **4627-byte** output.
+
+**Synchronized aggregation.** **Chipmunk** [FSZ23, CCS 2023] (succeeding Squirrel) is a *synchronized*
+lattice aggregate signature: signers aggregate **one message per time period** into a logarithmic-size
+(~few-KiB) aggregate via an evolving key-tree, with large per-signer keys and a *new* verifier. ML-ADSA does
+not require synchronization or per-period slots, places no per-signer key-size or one-message-per-period
+restriction, and produces a true ML-DSA-87 signature rather than a scheme-specific aggregate — at the cost
+of being single-common-message and "homomorphic-but-not-freely-mergeable." A fuller head-to-head (sizes,
+trust model, assumptions, interaction, verification) is in `docs/35` §4.
 
 **Half-aggregation / sequential aggregation.** Reduce size or assume sequential signing; generally not
 constant-size and not verifier-transparent.
@@ -361,7 +381,8 @@ procedure, so every node derives the identical `σ*` (no trusted aggregator). Th
 populated at epoch boundaries from on-chain registration keys (the trust anchor) plus a gossiped,
 validated commitment cache; an injected/equivocating key is rejected and the signer excluded while the
 honest set still aggregates (live: `cmd/mladsa-epochnet`, `cmd/mladsa-devnet`). Compression vs the list is
-constant 4627 B regardless of committee size (12–128× at typical/maximum committee sizes), with no needed
+constant 4627 B regardless of committee size (8–128× at typical/maximum committee sizes; e.g. a 16-member
+committee with 12 attesters compresses 12×), with no needed
 information lost: signer set = the public aggregation bits, key = Σ epoch-tree `t_i`, validity = one
 FIPS-204 verify. **Appendix A** gives the full case study: methodology, measured compression and
 agreement, the live epoch-key-tree authentication, the adversarial and no-leakage validation, and the
@@ -384,7 +405,7 @@ KATs) are in `vectors/`. The reference is portable and not yet constant-time/AVX
 The reference implementation (`go-mladsa/`) is cross-validated against **CIRCL** and **theQRL/go-qrllib**:
 every aggregate is a byte-exact ML-DSA-87 `(pk 2592, sig 4627)` triple their unmodified verifiers accept.
 Assurance has three surfaces (full traceability in `docs/31`): (i) **algorithm-level machine-checked
-proofs** — 77 lemmas across EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
+proofs** — 134 lemmas (102 EasyCrypt + 32 Coq) across 29 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
 **implementation conformance** — KATs and CIRCL/go-qrllib cross-checks; (iii) **code-level structural
 proofs** — Gobra theorems for the Merkle/one-time/framing/decision-linearity invariants. We are explicit
 about boundaries: the machine-checked proofs are about the algorithm/model; Go conformance is
@@ -435,6 +456,9 @@ invite.
 [BS22] Beullens, Seiler. *LaBRADOR: Compact Proofs for R1CS from Module-SIS.* 2022.
 [BTT22] Boschini, Takahashi, Tibouchi. *MuSig-L: Lattice-Based Multi-Signature with Single-Round Online…* CRYPTO 2022.
 [GHHM21] … adaptive reprogramming in the QROM.
+[dPKM⁺24] del Pino, Katsumata, Maller, Mouhartem, Prest, Saarinen. *Threshold Raccoon: Practical Threshold Signatures from Standard Lattice Assumptions.* CRYPTO 2024.
+[FSZ23] Fleischhacker, Simkin, Zhang. *Chipmunk: Better Synchronized Multi-Signatures from Lattices.* ACM CCS 2023.
+[Squirrel] Fleischhacker, Simkin, Zhang. *Squirrel: Efficient Synchronized Multi-Signatures from Lattices.* ACM CCS 2022.
 [Dilithium] Ducas et al. *CRYSTALS-Dilithium.* (Formosa-Crypto machine-checked ROM proof, eprint 2023/246.)
 *(Full bibliography — including the lattice-multisig and proof-of-aggregation lines surveyed in §2 — to be
 finalized against the ePrint template.)*

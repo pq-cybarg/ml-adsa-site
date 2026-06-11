@@ -238,8 +238,8 @@ Four properties requested for the transition (all implemented + tested/proven):
   `adv_mlwe + Pr[STMSIS]`. The multiplicity of valid signatures gives the adversary **no advantage**, and
   the bits of security equal ML-DSA-87 Cat 5 (`pk*` is a bona fide ML-DSA key — sum of MLWE samples is
   MLWE — and `verify` is the unmodified FIPS-204 verifier). Lemmas `in_equiv_classE`,
-  `equiv_class_guess_eq_forge`, `equiv_class_guess_bound`; whole formal suite green (15 classical EC +
-  4 quantum + 5 Coq).
+  `equiv_class_guess_eq_forge`, `equiv_class_guess_bound`; whole formal suite green (19 classical EC +
+  5 quantum + 5 Coq = 29 artifacts).
 
 ## 4.6 Live local-net proof: aggregate-of-aggregates is order-independent (`cmd/mladsa-hieragg`)
 
@@ -381,7 +381,8 @@ current design needs no external randomness (deterministic nonces, §4.7).
   round-trip + IndexedAttestation SSZ), `TestVerifyIndexedAttestationSigs_MLADSA` (the rewritten consensus
   verify accepts a real §7.7 aggregate via the pk* resolver against the **real** go-qrllib crypto, and
   rejects nil-resolver / wrong-pk* / tampered-sig), plus the Phase-1 compression/tamper/sybil/empty tests.
-- **Remaining:** H4-full (epoch-tree pk* resolver wiring), H6 (batch-verify/rate-limit), slasher
+- **Remaining:** H4-full beacon-state wiring / test-suite migration (the epoch-tree pk* resolver
+  itself is DONE — see §4.6b), H6 (batch-verify/rate-limit), slasher
   signature-path validation under load, and the `_test.go` suite migration.
 - Related: docs/17 (§7.7 combine), docs/23 (QRL 2.0 deployment), docs/26 (audit; H4/H5 rows), docs/27
   (3-surface code spec), `mladsa/decentralized.go` (`CombineFromPublic`), `cmd/mladsa-devnet` (live

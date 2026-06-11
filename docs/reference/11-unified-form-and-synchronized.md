@@ -1,5 +1,7 @@
 # Unified verifier form + synchronized aggregation via deterministic H(tx)
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 This captures two user-driven results: (1) a single *standard form* that subsumes ML-DSA
 and the aggregate; (2) deterministic `H(tx)` as the domain that enables **non-interactive**
 aggregation — which is the synchronized-aggregate paradigm (Chipmunk/Squirrel-class) and the

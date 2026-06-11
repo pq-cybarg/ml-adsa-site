@@ -1,5 +1,7 @@
 # 16 — Design-Space Exploration: Many-Time, BLS-like Aggregation of ML-DSA-87
 
+> **Historical / iteration note (2026-06-11).** This document is part of the research/design trail and reflects an **earlier iteration**; some counts, status labels, and construction details predate the current Construction F. The authoritative current specification is **`docs/30`**, the verification status and tallies are in **`docs/31`** and reproducible via **`formal/count-artifacts.sh`** (29 artifacts, 134 lemmas, 33/33 genuineness, 6 Gobra), and the cross-document reconciliation is **`docs/35`**. Numbers below are preserved as the historical record.
+
 **Status:** research design record (Session 3). This document captures, comprehensively and
 honestly, an extended design exploration of whether/how ML-DSA-87 signatures can be aggregated
 into a *single native* signature that is *many-time* and BLS-like, under strict cypherpunk

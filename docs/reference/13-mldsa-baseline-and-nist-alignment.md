@@ -140,11 +140,11 @@ reducing to MLWE + SelfTargetMSIS, with the QRL Go implementation as the (separa
 | ML-ADSA property | ML-DSA baseline analogue | Same assumption? | Our status |
 |---|---|---|---|
 | A1 correctness | scheme correctness (`δ` term) | n/a | **Coq machine-checked** + Go-vs-CIRCL |
-| A2 unforgeability (`MSUFCMA`) | `Dilithium_secure` EUF-CMA | **MLWE + SelfTargetMSIS** ✓ (now matched) | statement matches baseline shape; proof admitted (obls M/S/E/R/F) |
+| A2 unforgeability (`MSUFCMA`) | `Dilithium_secure` EUF-CMA | **MLWE + SelfTargetMSIS** ✓ (now matched) | statement matches baseline shape; EUF-CMA **+ SUF-CMA now machine-checked (admit-free)** — see docs/18, docs/31 (the M/S/E/R/F obligations are all discharged) |
 | A3 zero-leakage (Constr. A) | HVZK / `KLS_HVZK` 9-game chain | same (perfect masking) | **perfect-ZK machine-checked** (`ml_adsa_zk_proof.ec`) |
 | A4 rogue-key | (n/a in single-signer ML-DSA; PoP layer) | reduces to A2 | **collapse machine-checked** (`ml_adsa_rogue_proof.ec`); residual = A2 |
 | A5 no-new-power | knowledge-soundness / extraction (`RedMSIS`) | **Module-SIS** ✓ | **reduction machine-checked** (`ml_adsa_nnp_proof.ec`); residual = MSIS |
-| A7 post-quantum (QROM) | KLS18 QROM (paper; **gap**) | MLWE + SelfTargetMSIS | SPECIFIED; *not* inheritable as machine-checked (see blockers) |
+| A7 post-quantum (QROM) | KLS18 QROM (paper; **gap**) | MLWE + SelfTargetMSIS | ML-ADSA's own QROM (Construction A) is **machine-checked and tight** (`qrom_eufcma_uncond`); the literature gap about upstream FSwA QROM is a separate matter and remains noted |
 | A8 no trusted setup | `A = ExpandA(ρ)` public seed | identical mechanism | STRUCTURAL |
 
 **Verification by comparison — the key finding:** every assumption ML-ADSA's proofs bottom out in is
@@ -181,7 +181,8 @@ no assumption downgrade relative to the base scheme.
 - **SUF-CMA**: add the Module-SIS strong-unforgeability term (`ζ'` bound) — mirrors the artifact's
   `RedMSIS` / spec §6.2.2.
 - **`ctx` domain separation**: model FIPS-204's message encoding and `ctx` string (absent from the round-3
-  artifact); our Go layer already uses `ctx="QRL"`, so the spec side must match.
+  artifact); `ctx` is a caller-supplied domain, and the QRL 2.0 consensus deployment binds `ctx="ZOND"`
+  (the go-qrllib wallet domain), so the spec side must match.
 - **Parameters**: document that ML-ADSA-87 reuses ML-DSA-87's `(k,ℓ,η,τ,γ1,γ2,d,…)` verbatim, so the
   core-SVP Category-5 numbers (2^285 MLWE / 265-bit MSIS) carry over unchanged — aggregation does not
   touch the lattice, only how signatures combine.

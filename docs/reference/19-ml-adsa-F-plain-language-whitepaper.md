@@ -80,6 +80,23 @@ There are exactly two families that get close:
 **Construction F is Technique 1, upgraded** so that it is *many-time* and supports rich on-chain
 decisions — while keeping the output a real ML-DSA-87 signature.
 
+**What about the other recent post-quantum schemes?** Two are worth naming, because they solve
+*nearby but different* problems:
+
+- **Threshold Raccoon** (2024) is a *threshold* signature: a group jointly produces **one** signature
+  under a **shared** key, but the signers must **talk to each other over three rounds**, the result is
+  a **new ~13 KB signature type** (not a standard ML-DSA one), and it needs a distributed key setup.
+  Great when you want "`t`-of-`n` people authorize one action together"; not the same as combining many
+  *independent* signatures into a standard one.
+- **Chipmunk** (2023) is a *synchronized* aggregate: it packs **one message per time slot** into a small
+  aggregate using an evolving key tree. Efficient, but you must agree on slots and accept large per-signer
+  keys and, again, a **new verifier**.
+
+ML-ADSA's distinguishing bet: the aggregate is a **plain ML-DSA-87 signature the unmodified standard
+verifier already accepts**, built **without any rounds of interaction, without time slots, and without a
+trusted aggregator** — at the cost of everyone signing a common message. (A side-by-side table is in
+`docs/35` §4.)
+
 ---
 
 ## 5. The core trick that makes the aggregate verify
@@ -240,8 +257,9 @@ Cryptographers distinguish three strengths of evidence. We are explicit about wh
 - **Measured** — we ran real code and an *independent* verifier accepted the output.
 - **Assumed** — a standard, named hardness assumption (everyone in the field relies on these).
 
-For Construction F: **23 machine-checked proof artifacts** (all passing) **+** independent-verifier
-(CIRCL) measurements **+** a small, standard assumption set. Concretely, we machine-checked:
+For Construction F: **29 machine-checked prover artifacts** (all passing — 134 lemmas across EasyCrypt,
+EasyPQC, and Rocq, plus 6 Gobra code-level theorems) **+** independent-verifier (CIRCL) measurements
+**+** a small, standard assumption set. Concretely, we machine-checked:
 
 - correctness for N = 10/100/1000 (the aggregate really verifies),
 - unforgeability at **NIST Level 5 with no loss** vs a single ML-DSA-87 signature,

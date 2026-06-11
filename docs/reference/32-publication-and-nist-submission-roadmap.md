@@ -60,10 +60,11 @@ signatures with a decentralized combine are squarely in this conversation. Landi
 MPTC's terminology (it is a *non-interactive aggregate*, adjacent to but distinct from *threshold*).
 
 **Positioning vs. recent lattice schemes (for the submission's related-work).** The closest lattice peers
-are **Threshold Raccoon** (del Pino et al., CRYPTO 2024 — a `t`-of-`n` *threshold* signature over the
-*new* Raccoon scheme: 3-round interactive, ~13 KiB, new verifier) and **Chipmunk** (Fleischhacker–Simkin–
-Zhang, CCS 2023 — a *synchronized* aggregate, one message per period, ~few-KiB, new verifier, large
-per-signer keys). ML-ADSA differs on the three axes a reviewer will probe: (i) its output is a **bona-fide
+are **Threshold Raccoon** (del Pino et al., **EUROCRYPT 2024**, ePrint 2024/184 — a `t`-of-`n` *threshold*
+signature over a *new* Raccoon-style scheme: 3-round interactive, ~13 KiB sig, ~40 KiB comms per signer,
+trusted dealer, new verifier, Hint-MLWE+SelfTargetMSIS) and **Chipmunk** (Fleischhacker–**Herold**–Simkin–
+Zhang, CCS 2023 — a *synchronized same-message multi-signature*, ~118–136 KB aggregate at 1024–8192
+signers, large per-signer secret-key state, new verifier, ring-SIS+ROM). ML-ADSA differs on the three axes a reviewer will probe: (i) its output is a **bona-fide
 ML-DSA-87/FIPS-204 signature** the *unmodified* verifier accepts (no new verifier); (ii) it is
 **non-interactive and unsynchronized** (no signing rounds, no per-period slots); (iii) it reduces to
 **ML-DSA's own assumptions** at Category 5. The trade-off is single-common-message, "homomorphic-but-not-

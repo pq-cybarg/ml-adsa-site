@@ -83,14 +83,15 @@ decisions — while keeping the output a real ML-DSA-87 signature.
 **What about the other recent post-quantum schemes?** Two are worth naming, because they solve
 *nearby but different* problems:
 
-- **Threshold Raccoon** (2024) is a *threshold* signature: a group jointly produces **one** signature
-  under a **shared** key, but the signers must **talk to each other over three rounds**, the result is
-  a **new ~13 KB signature type** (not a standard ML-DSA one), and it needs a distributed key setup.
-  Great when you want "`t`-of-`n` people authorize one action together"; not the same as combining many
-  *independent* signatures into a standard one.
-- **Chipmunk** (2023) is a *synchronized* aggregate: it packs **one message per time slot** into a small
-  aggregate using an evolving key tree. Efficient, but you must agree on slots and accept large per-signer
-  keys and, again, a **new verifier**.
+- **Threshold Raccoon** (EUROCRYPT 2024) is a *threshold* signature: a group jointly produces **one**
+  signature under a **shared** key, but the signers must **talk to each other over three rounds**, the
+  result is a **new ~13 KB signature type** (not a standard ML-DSA one), and the key is handed out by a
+  **trusted dealer**. Great when you want "`t`-of-`n` people authorize one action together"; not the same
+  as combining many *independent* signatures into a standard one.
+- **Chipmunk** (CCS 2023) is a *synchronized* multi-signature: many signers sign the **same message in a
+  given time slot** and those combine into **one aggregate (still ~100+ KB)** using an evolving key tree.
+  A real improvement over its predecessor, but you must agree on time slots, each signer carries a **large
+  secret key state**, and it needs a **new verifier**.
 
 ML-ADSA's distinguishing bet: the aggregate is a **plain ML-DSA-87 signature the unmodified standard
 verifier already accepts**, built **without any rounds of interaction, without time slots, and without a

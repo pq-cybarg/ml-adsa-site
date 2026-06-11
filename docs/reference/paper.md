@@ -151,21 +151,28 @@ DOTT, Damgård et al.) target a *single* aggregate key set up interactively; man
 on a key-aggregation round. ML-ADSA is non-interactive after a one-time registration, derives the
 aggregate key by public summation, and proves concurrent security without ROS/AGM.
 
-**Threshold Raccoon** [dPKM⁺24, CRYPTO 2024] is a `t`-of-`n` lattice *threshold* signature built on the
-masking-friendly Raccoon FSwA scheme: signers run a **3-round interactive** protocol to jointly produce one
-signature (≈13 KiB, independent of `n`, up to ~1024 parties) verified by a *new* Raccoon verifier under
-MLWE+MSIS. It answers a different question from ML-ADSA — a threshold over a *new* scheme requiring
-interaction and a distributed key — whereas ML-ADSA non-interactively aggregates *independent* ML-DSA-87
-signatures into a single **bona-fide FIPS-204 signature** the *unmodified* verifier accepts, with no
-threshold key, no interaction beyond one-time registration, and a constant **4627-byte** output.
+**Threshold Raccoon** [dPKM⁺24, EUROCRYPT 2024] is a `t`-of-`n` lattice *threshold* signature built on a
+Raccoon-style (masking-friendly, discrete-Gaussian) FSwA scheme: signers run a **3-round interactive**
+protocol to jointly produce one signature (≈13 KiB, independent of `n` and `t`; ~40 KiB communication
+*per signer*; thresholds up to ~1024) verified by a *new* Raccoon-style verifier, with security under
+**Hint-MLWE + SelfTargetMSIS** (Hint-MLWE reduces to MLWE) and a **trusted dealer** for key generation
+(distributed key generation is left as future work). It answers a different question from ML-ADSA — a
+threshold over a *new* scheme requiring interaction and a dealer-distributed key — whereas ML-ADSA
+non-interactively aggregates *independent* ML-DSA-87 signatures into a single **bona-fide FIPS-204
+signature** the *unmodified* verifier accepts, with no threshold key, no interaction beyond one-time
+registration, and a constant **4627-byte** output.
 
-**Synchronized aggregation.** **Chipmunk** [FSZ23, CCS 2023] (succeeding Squirrel) is a *synchronized*
-lattice aggregate signature: signers aggregate **one message per time period** into a logarithmic-size
-(~few-KiB) aggregate via an evolving key-tree, with large per-signer keys and a *new* verifier. ML-ADSA does
-not require synchronization or per-period slots, places no per-signer key-size or one-message-per-period
-restriction, and produces a true ML-DSA-87 signature rather than a scheme-specific aggregate — at the cost
-of being single-common-message and "homomorphic-but-not-freely-mergeable." A fuller head-to-head (sizes,
-trust model, assumptions, interaction, verification) is in `docs/35` §4.
+**Synchronized aggregation.** **Chipmunk** [FHSZ23, CCS 2023] (succeeding Squirrel [FSZ22]) is a
+*synchronized* lattice **multi-signature** (a SIS-based key-homomorphic one-time signature plus a
+homomorphic vector commitment): signers aggregate signatures on the **same message at one time slot** into
+a single aggregate (≈118 KB at 1024 signers, ≈136 KB at 8192, at 112-bit security — *not* constant-small),
+where each signer holds a **large secret-key tree state** (re-derivable from a seed; the public key itself
+is small) and aggregation runs in the ROM under (ring-)SIS. ML-ADSA does not require synchronization or
+per-period slots, allows *distinct* per-signer participation rather than a single common-message slot,
+keeps small ML-DSA keys, and produces a true 4627-byte ML-DSA-87 signature rather than a ~100 KB
+scheme-specific aggregate — at the cost of being single-common-message and
+"homomorphic-but-not-freely-mergeable." A fuller, source-checked head-to-head (sizes, trust model,
+assumptions, interaction, verification) is in `docs/35` §4.
 
 **Half-aggregation / sequential aggregation.** Reduce size or assume sequential signing; generally not
 constant-size and not verifier-transparent.
@@ -456,9 +463,9 @@ invite.
 [BS22] Beullens, Seiler. *LaBRADOR: Compact Proofs for R1CS from Module-SIS.* 2022.
 [BTT22] Boschini, Takahashi, Tibouchi. *MuSig-L: Lattice-Based Multi-Signature with Single-Round Online…* CRYPTO 2022.
 [GHHM21] … adaptive reprogramming in the QROM.
-[dPKM⁺24] del Pino, Katsumata, Maller, Mouhartem, Prest, Saarinen. *Threshold Raccoon: Practical Threshold Signatures from Standard Lattice Assumptions.* CRYPTO 2024.
-[FSZ23] Fleischhacker, Simkin, Zhang. *Chipmunk: Better Synchronized Multi-Signatures from Lattices.* ACM CCS 2023.
-[Squirrel] Fleischhacker, Simkin, Zhang. *Squirrel: Efficient Synchronized Multi-Signatures from Lattices.* ACM CCS 2022.
+[dPKM⁺24] del Pino, Katsumata, Maller, Mouhartem, Prest, Saarinen. *Threshold Raccoon: Practical Threshold Signatures from Standard Lattice Assumptions.* EUROCRYPT 2024 (LNCS 14652, pp. 219–248); ePrint 2024/184.
+[FHSZ23] Fleischhacker, Herold, Simkin, Zhang. *Chipmunk: Better Synchronized Multi-Signatures from Lattices.* ACM CCS 2023; ePrint 2023/1820.
+[FSZ22] Fleischhacker, Simkin, Zhang. *Squirrel: Efficient Synchronized Multi-Signatures from Lattices.* ACM CCS 2022; ePrint 2022/694.
 [Dilithium] Ducas et al. *CRYSTALS-Dilithium.* (Formosa-Crypto machine-checked ROM proof, eprint 2023/246.)
 *(Full bibliography — including the lattice-multisig and proof-of-aggregation lines surveyed in §2 — to be
 finalized against the ePrint template.)*

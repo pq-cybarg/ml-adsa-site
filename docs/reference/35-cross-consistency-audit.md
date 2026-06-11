@@ -118,22 +118,36 @@ whitepaper (docs/19), and a positioning note in docs/32 (NIST/MPTC). See §4.
 
 ## 4. Threshold Raccoon & Chipmunk vs ML-ADSA-87 (comparison)
 
-| | **Threshold Raccoon** (del Pino–Katsumata–Maller–Mouhartem–Prest–Saarinen, CRYPTO 2024) | **Chipmunk** (Fleischhacker–Simkin–Zhang, CCS 2023) | **ML-ADSA-87** (this work) |
+_Figures below are taken from the primary papers (ePrint 2024/184 and 2023/1820) and were
+adversarially fact-checked against the source text; see the notes under the table._
+
+| | **Threshold Raccoon** (del Pino–Katsumata–Maller–Mouhartem–Prest–Saarinen, **EUROCRYPT 2024**, ePrint 2024/184) | **Chipmunk** (Fleischhacker–**Herold**–Simkin–Zhang, CCS 2023, ePrint 2023/1820) | **ML-ADSA-87** (this work) |
 |---|---|---|---|
-| Primitive | `t`-of-`n` **threshold** signature (one joint signature) | **synchronized** aggregate signature (one slot per time period) | **aggregate** signature over an existing per-signer scheme |
-| Base scheme | Raccoon (masking-friendly FSwA lattice sig) — a *new* scheme | hash-based/lattice synchronized multisig (successor to Squirrel) | **ML-DSA-87 (FIPS-204)** unchanged |
-| Verifier | new Raccoon verifier | new Chipmunk verifier | **unmodified FIPS-204 verifier** accepts `σ*` |
-| Interaction | **3 rounds**, interactive signing with shares | non-interactive aggregate, but **one signature per period** (synchronized) | **non-interactive**, no per-signer interaction; order/grouping independent |
-| Trust / setup | distributed key generation; threshold trust | trusted-ish per-period key tree (one-time, evolving) | **no trusted setup, no trapdoor, no aggregator** |
-| Aggregate / sig size | ~**13 KiB** signature (independent of `n`); ~40 KiB comms | ~**~5 KiB** aggregate (logarithmic), large per-signer keys | **4627 B constant** in `N` (a real FIPS-204 sig) |
-| Participants | up to ~**1024** | large (Merkle-indexed) | committee `N` up to deployment cap (qrysm: 128) |
-| Assumptions | MLWE + MSIS (Raccoon) | (synchronized) lattice + CR-hash | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
-| Formal verification | paper proofs | paper proofs | **134 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
-| Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates **one message per period** (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
+| Primitive | `t`-of-`n` **threshold** signature (one joint signature) | **synchronized multi-signature** (many signers, **same message**, one per time slot) | **aggregate** signature over an existing per-signer scheme |
+| Base scheme | Raccoon-style FSwA lattice sig (discrete-Gaussian variant) — a *new* scheme | SIS-based key-homomorphic OTS + homomorphic vector commitment (successor to Squirrel) | **ML-DSA-87 (FIPS-204)** unchanged |
+| Verifier | new Raccoon-style verifier | new Chipmunk verifier | **unmodified FIPS-204 verifier** accepts `σ*` |
+| Interaction | **3 rounds**, interactive signing with shares | non-interactive aggregation, but **same-message, one slot per period** (synchronized) | **non-interactive**, no per-signer interaction; order/grouping independent |
+| Trust / setup | **trusted dealer** (centralized KeyGen; DKG is explicitly out of scope) | public params (SIS matrix) + ROM; no CRS ceremony | **no trusted setup, no trapdoor, no aggregator** |
+| Aggregate / sig size | ~**13 KiB** signature (≤12 736 B; independent of `n`,`t`); **~40 KiB comms per signer** (+16·`t` B) | aggregate ~**118 KB at 1024 signers / ~136 KB at 8192** (112-bit); not constant-small | **4627 B constant** in `N` (a real FIPS-204 sig) |
+| Per-signer key/state | small | **large secret-key tree state** (seed-derivable, top layers cached); **public key small (~1 KB)** | small ML-DSA key (pk 2592 B) |
+| Participants | threshold `t` up to ~**1024** | benchmarked to 8192 signers; bounded #time-slots (2^τ) | committee `N` up to deployment cap (qrysm: 128) |
+| Assumptions | "standard lattice": **Hint-MLWE + SelfTargetMSIS** (Hint-MLWE → MLWE) + PRF | **(ring-)SIS + ROM** (Ajtai hash; CR ⇐ SIS) | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
+| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **134 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
+| Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates many **same-message** sigs valid at one slot (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
+
+**Source-check notes (corrections applied after literature review).** (a) Venue is **EUROCRYPT 2024**,
+not CRYPTO. (b) Threshold Raccoon uses a **trusted dealer**, not DKG (DKG is future work); its 40 KiB
+communication is **per signer**; "1024" is the **threshold `t`**; the security reduction is to
+**Hint-MLWE + SelfTargetMSIS** (not literally MLWE+MSIS), and it uses **discrete Gaussians**, gives
+**static/selective** security only, is **not** round-optimal, and needs no threshold-FHE (PRF one-time
+masks). (c) Chipmunk has **four** authors (Herold included); it is a **multi-signature** (same message),
+its aggregate is **~136 KB** (8192 signers) — *not* "~5 KiB" and *not* "logarithmic" (keygen/sig scale
+**linearly in 2^τ** tree leaves); the **large object is the secret-key state**, the public key is small;
+assumptions are **ring-SIS + ROM**.
 
 **Positioning.** Threshold Raccoon answers a different question (a `t`-of-`n` *threshold* over a
-*new* scheme, interactive, ~13 KiB) and Chipmunk answers another (a *synchronized* aggregate, one
-slot per period). ML-ADSA's distinguishing properties are (i) the output is a **bona-fide
+*new* scheme, interactive, ~13 KiB) and Chipmunk answers another (a *synchronized same-message
+multi-signature*, ~100+ KB aggregate). ML-ADSA's distinguishing properties are (i) the output is a **bona-fide
 ML-DSA-87 signature** the *unmodified* FIPS-204 verifier accepts, (ii) **non-interactive,
 many-time, decentralized** aggregation with **no trusted aggregator/setup/trapdoor**, and (iii) it
 inherits ML-DSA's exact assumptions and Category-5 parameters. The cost is the structural
@@ -159,7 +173,9 @@ All findings in §3 discharged:
   axiom discharged by `masking_perfect_concrete`. **Admit-free** confirmed; stale `props.ec:3` header fixed.
 - **Lemma-name drift** fixed in docs/17 (target names → shipped names).
 - **Benchmarks** harmonized: 578→592 KB (592 256 B); paper 12–128×→8–128×; docs/33 N=8 (8×) row added.
-- **Threshold Raccoon + Chipmunk** added: paper §2 (+refs [dPKM⁺24], [FSZ23], [Squirrel]), docs/19
+- **Threshold Raccoon + Chipmunk** added (source-checked: venue EUROCRYPT 2024, Chipmunk = 4 authors incl.
+  Herold, aggregate ~136 KB not ~5 KiB, trusted dealer not DKG, Hint-MLWE/ring-SIS+ROM): paper §2 (+refs
+  [dPKM⁺24], [FHSZ23], [FSZ22]), docs/19
   (plain language), docs/32 (MPTC positioning), and §4 above.
 - **Historical-iteration docs** (01–03, 05–12, 15, 16, whitepaper) carry dated provenance banners pointing
   here + to docs/30/31/`count-artifacts.sh`; their body numbers are preserved as the historical record.

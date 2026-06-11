@@ -8,7 +8,7 @@ checked, single consistent assumption base. Labels as in docs/16/17.
 ## 1. Machine-checked artifact inventory (all GREEN)
 
 `formal/check-all.sh` → **19 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Rocq = 29 artifacts**;
-`formal/genuineness.sh` → **33/33** (each weakening breaks its proof). Go: `go test ./...` PASS.
+`formal/genuineness.sh` → **34/34** (each weakening breaks its proof). Go: `go test ./...` PASS.
 (Count updated: now includes `ml_adsa_F_hiding.ec` and the later equivalence-class lemmas; `docs/31` is the
 authoritative current tally.)
 
@@ -93,7 +93,7 @@ collision-resistance / injective framing of H, MTH   -- a hash (SHAKE-256)
 
 Named axioms (all of the above kind, none hollow): `expandS_range`, `A_regularity`, `commit_binding`,
 `hvzk_masking`, `prf_security`, `mldsa_extract_sound`, `coq_F_C1_completeness` (imports the Rocq F-C1
-theorem), `dkey_ll`. Verified: zero `admit/Admitted/sorry`; 33/33 genuineness.
+theorem), `dkey_ll`. Verified: zero `admit/Admitted/sorry`; 34/34 genuineness.
 
 ## 4. What is proven, in plain terms
 
@@ -116,7 +116,12 @@ signature** accepted by the **unmodified FIPS-204 verifier** (measured vs CIRCL)
   `Q·eps_content`; F-C11: the secret-free game bound `B = adv_mlwe + Pr[STMSIS]`) — both **= F-C3**,
   not new assumptions; the reductions themselves are proven. Chaining the F-C11 components into a
   single literal `Pr`-inequality is `concurrent_euf_chained` (done); the secret-free→SelfTargetMSIS
-  end is euf.ec (proven).
+  end is euf.ec (proven). **Update (proof-closure, docs/35 §6):** for the *deployed* non-interactive
+  scheme there is no supplied bound at all — its signing oracle is atomic (no open sessions), so
+  concurrent EUF-CMA **is** `msufcma_uncond` directly (`ml_adsa_euf.ec : concurrent_atomic_uncond`).
+  The supplied `B` pertains only to the optional interactive commit-reveal variant. Separately, the
+  QROM multi-query signing seam is now mechanized end-to-end (`ml_adsa_qrom_ghhm.ec :
+  sign_oracle_mr_equiv` — the qs-round real signer ≡ reprogramming simulator, perfectly).
 - **Byte-exact ML-DSA internals** (NTT/SHAKE/UseHint/leaf_ok) remain **named** in EC and **measured**
   in Go (the formosa-crypto/dilithium person-years effort is out of scope), per docs/17 §10.
 - **Operational**: one-time per-content key/nonce discipline (NIST SP 800-208), per-content key

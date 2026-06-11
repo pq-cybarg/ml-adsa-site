@@ -7,7 +7,7 @@ verification dossier (`docs/31`) and the publication / NIST-submission roadmap (
 is written in the structural style of NIST **FIPS-204** (ML-DSA) so that every object, algorithm, and
 security claim maps onto the format a NIST PQC / additional-signatures / MPTC submission expects.
 
-> Status note (honest): the scheme's security is established by 134 machine-checked lemmas (102 EasyCrypt
+> Status note (honest): the scheme's security is established by 137 machine-checked lemmas (105 EasyCrypt
 > + 32 Coq) across 29 prover artifacts, plus 6 Gobra code-level theorems (tallies reproducible via
 > `formal/count-artifacts.sh`; see the cross-consistency audit `docs/35`), reducing to the same assumptions
 > as ML-DSA, plus a CIRCL/go-qrllib-anchored

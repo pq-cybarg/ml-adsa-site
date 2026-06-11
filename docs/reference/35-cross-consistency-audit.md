@@ -17,8 +17,8 @@ artifact set is defined) plus the source files. Current output:
 
 ```
 Prover artifacts : 29   (19 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
-Machine-checked lemmas : 134   (102 EasyCrypt + 32 Coq)
-Genuineness checks : 33/33
+Machine-checked lemmas : 137   (105 EasyCrypt + 32 Coq)
+Genuineness checks : 34/34
 Gobra theorems : 6   (5/5 Gobra genuineness)
 ```
 
@@ -132,7 +132,7 @@ adversarially fact-checked against the source text; see the notes under the tabl
 | Per-signer key/state | small | **large secret-key tree state** (seed-derivable, top layers cached); **public key small (~1 KB)** | small ML-DSA key (pk 2592 B) |
 | Participants | threshold `t` up to ~**1024** | benchmarked to 8192 signers; bounded #time-slots (2^τ) | committee `N` up to deployment cap (qrysm: 128) |
 | Assumptions | "standard lattice": **Hint-MLWE + SelfTargetMSIS** (Hint-MLWE → MLWE) + PRF | **(ring-)SIS + ROM** (Ajtai hash; CR ⇐ SIS) | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
-| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **134 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
+| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **137 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
 | Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates many **same-message** sigs valid at one slot (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
 
 **Source-check notes (corrections applied after literature review).** (a) Venue is **EUROCRYPT 2024**,
@@ -160,9 +160,9 @@ commitment), which is also what gives ROS-resistance with **no AGM/OMDL**.
 
 All findings in §3 discharged:
 
-- **Source of truth** locked: `formal/count-artifacts.sh` → 29 artifacts / 134 lemmas (102 EC + 32 Coq) /
-  33-33 genuineness / 6 Gobra. Re-verified green; `ml_adsa_props.ec` (only proof file touched —
-  comment-only) recompiles GREEN, `go-mladsa` builds.
+- **Source of truth** locked: `formal/count-artifacts.sh` → 29 artifacts / **137 lemmas (105 EC + 32 Coq)** /
+  **34-34** genuineness / 6 Gobra (the count-audit pass set 134/33; the proof-closure pass in §6 added 3
+  lemmas + 1 genuineness check). Re-verified: `check-all.sh` ALL GREEN, `go-mladsa` builds.
 - **Counts** corrected on the canonical-current surface (paper, README, docs/18/30/31/32) and mixed docs
   (13, 14, 17, 20, 21, 27, 28, 29). Internal contradictions resolved: paper 39/77→134; docs/31
   19-vs-15→19; docs/27 24-vs-29→29; docs/17 F-C11 [proven]/[open]/[partly] → proven; docs/29 H4-full
@@ -181,5 +181,45 @@ All findings in §3 discharged:
   here + to docs/30/31/`count-artifacts.sh`; their body numbers are preserved as the historical record.
   (docs/04 is a still-current standalone impossibility result — not bannered.)
 - **Public site** re-synced via the new `ml-adsa-site/sync-docs.sh` (36 reference copies refreshed + docs/35
-  added to nav; landing-page lemma count 77→134). **Not pushed** — outward publication awaits explicit
-  go-ahead (opsec).
+  added to nav; landing-page lemma count 77→137).
+
+---
+
+## 6. Adversarial self-review + proof-closure (2026-06-11)
+
+Four skeptical reviewers probed the proof claims (QROM-A tightness, aggregation norm/cross-terms/hint/
+leakage, ROS/concurrent/non-interactive, deterministic-nonce/equiv-class/many-time) against the proofs,
+code, and literature. **Cross-checked against the corpus, they found no undisclosed soundness gap**: the
+substantive reduction (`msufcma_uncond` / `qrom_eufcma_uncond` → MLWE + SelfTargetMSIS) stands, and the
+probed "gaps" are the corpus's already-disclosed standard conventions (the perfect-HVZK kernel shared with
+all ML-DSA proofs, with the concrete QRO-reprogramming term *derived* in `ghhm.ec`; the supplied standard
+bounds for F-C4/F-C11; the one-time discipline + fault exposure; the algorithm-proof-vs-CIRCL-conformance
+boundary; the inherent need for independent cryptanalysis). One over-cautious relabel (F-C11 →
+[partly proven]) was tried and reverted — F-C11 uses the same supplied-bound convention as F-C4, so it is
+[proven] with the bound disclosed.
+
+To convert two *disclosed-supplied* steps into *end-to-end mechanized* ones, two lemmas were added and
+machine-checked (ALL GREEN; counts → 137 / 34-34):
+
+1. **Deployed concurrent security is the EUF-CMA bound, no supplied B** — `ml_adsa_euf.ec :
+   concurrent_atomic_uncond`. The deployed scheme is non-interactive/atomic (no open sessions), so its
+   signing oracle already models unbounded concurrent atomic queries; concurrent EUF-CMA *is*
+   `msufcma_uncond` directly (no ROS term, no supplied bound). (The optional *interactive* commit-reveal
+   variant's full concurrent reduction remains the standard supplied argument + pending cryptanalysis —
+   the genuine open problem, not faked.)
+2. **End-to-end qs-round QROM signing-oracle simulation** — `ml_adsa_qrom_ghhm.ec :
+   sign_oracle_mr_equiv` / `sign_oracle_mr_pr_eq`. The proven per-round program-equivalence
+   (`reprog_round_equiv`) is lifted by a while-loop coupling to the whole qs-query signing oracle: the
+   real-RO signer and the reprogramming HVZK simulator are perfectly indistinguishable, closing the
+   "multi-query seam" the `ghhm.ec` header flagged. Genuineness check added (dropping the per-round call
+   breaks it) → 34/34.
+
+Remaining genuinely-open items (inherent, not relabelable): independent human cryptanalysis (esp. the
+interactive concurrent variant), and the bit-level Montgomery encoding (impl-conformance, byte-checked).
+
+---
+
+## 7. Opsec note
+
+Outward publication (pushes to `pq-cybarg/ml-adsa` + the public site) is performed only on explicit
+go-ahead, authored `pq-cybarg <resistant@tuta.com>`, UTC timestamps, ghid-locked.

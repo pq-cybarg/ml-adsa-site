@@ -6,7 +6,7 @@ dossier ties **specification ↔ code ↔ machine-checked proofs ↔ tests** int
 establish.
 
 > Reproduce everything: `formal/check-all.sh` (29 prover artifacts, ALL GREEN), `formal/genuineness.sh`
-> (33 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
+> (34 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
 > `go-mladsa/` and the qrysm fork, and the three live demos (`cmd/mladsa-devnet`, `mladsa-hieragg`,
 > `mladsa-epochnet`).
 
@@ -62,10 +62,10 @@ NTT. It is validated by byte-exact dual-reference equality against CIRCL + go-qr
 | Coq / Rocq (`nsatz` over R) | system | 5 files | green |
 | **Total prover artifacts** | `formal/check-all.sh` | **29** | **ALL GREEN** |
 | Gobra (ETH, Docker) | `formal/gobra/` | 6 theorems | green |
-| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **33** | 33/33 |
+| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **34** | 34/34 |
 
-Lemma tally: **102 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 134 machine-checked**, plus 6
-Gobra code-level theorems. (Artifact *file* count is 29; lemma count is 134 — both framings are used in
+Lemma tally: **105 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 137 machine-checked**, plus 6
+Gobra code-level theorems. (Artifact *file* count is 29; lemma count is 137 — both framings are used in
 the literature; do not conflate them. All figures are produced by `formal/count-artifacts.sh`, the single
 source of truth.)
 
@@ -73,7 +73,7 @@ source of truth.)
 > conflated *5 Coq files* with *5 Coq lemmas* (Coq has 32 lemmas/theorems) and predated the masking /
 > rounding / NTT / NTT-inversion / GHHM additions; older docs also quote stale artifact counts (23, 24).
 > The authoritative current numbers are those of `formal/count-artifacts.sh`: **29 artifacts**
-> (19 classical + 5 quantum + 5 Coq) and **134 lemmas** (102 EC + 32 Coq), with `genuineness.sh` at 33/33.
+> (19 classical + 5 quantum + 5 Coq) and **137 lemmas** (105 EC + 32 Coq), with `genuineness.sh` at 34/34.
 > The cross-consistency audit `docs/35` reconciles every document to these.
 
 ---
@@ -191,8 +191,8 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 ```
 # Algorithm proofs (29 artifacts): EasyCrypt classical+QROM + Coq
 cd formal && zsh check-all.sh                 # → ALL GREEN (19 classical + 5 quantum + 5 Coq = 29)
-zsh count-artifacts.sh                         # → 29 artifacts, 134 lemmas (102 EC + 32 Coq), 33/33, 6 Gobra
-zsh genuineness.sh                            # → 33/33 (weaken axiom ⇒ proof breaks)
+zsh count-artifacts.sh                         # → 29 artifacts, 137 lemmas (105 EC + 32 Coq), 34/34, 6 Gobra
+zsh genuineness.sh                            # → 34/34 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)
 cd formal/gobra && zsh run.sh                 # → 6 theorems, "Gobra found 0 errors"; zsh genuineness.sh → 5/5
 # Implementation conformance + KATs (CIRCL + go-qrllib byte-accept)

@@ -457,7 +457,7 @@ or Construction E). State-reuse is the dominant operational risk (§13).
 | AB5 | norm/hint overflow at large N | verify fails | enforce §3.2 `N_max`, §7.6 (N3) bound checks before emit |
 | AB6 | side-channel on `s1ⁱ_C`/`yⁱ_C` | secret leak | constant-time ExpandS/ExpandMask/SampleInBall; no secret branches |
 | AB7 | epoch exhaustion / state loss | liveness / safety | §12.4 roll; backup state; fail-closed |
-| AB8 | concurrent signing sessions (ROS) | forgery if F-C11 unmet | until F-C11 [open] is proven, restrict to one open session per `C` / use MuSig-L multi-nonce |
+| AB8 | concurrent signing sessions (ROS) | forgery if the concurrent claim fails cryptanalysis | F-C11 is [proven] (unbiasable challenge + HVZK, no ROS/AGM; supplied single-session bound `B`, same convention as F-C4) — the residual is *cryptanalytic*, not a mechanization gap. Defense-in-depth pending independent cryptanalysis: the deterministic one-time discipline already enforces one challenge per `C`; an interactive variant may use MuSig-L multi-nonce |
 | AB9 | metadata: "is-an-aggregate" distinguishable | privacy (not security) | inherent (docs/16 §13); use decoys for membership privacy if needed |
 
 ---

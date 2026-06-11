@@ -1,0 +1,100 @@
+site_name: ML-ADSA
+site_description: >-
+  A trapdoor-free, post-quantum, BLS-like aggregate signature over ML-DSA-87 (FIPS-204) —
+  machine-checked in EasyCrypt, Coq, and Gobra.
+site_url: https://pq-cybarg.github.io/ml-adsa-site/
+site_author: pq-cybarg
+copyright: "Released as a defensive publication. Independent cryptanalysis is invited."
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - js/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Paper: reference/paper.md
+  - Whitepaper (plain language): reference/19-ml-adsa-F-plain-language-whitepaper.md
+  - Formal Specification: reference/30-ml-adsa-formal-specification.md
+  - Verification Dossier: reference/31-ml-adsa-verification-dossier.md
+  - Publication & NIST Roadmap: reference/32-publication-and-nist-submission-roadmap.md
+  - Benchmarks: reference/33-ml-adsa-benchmarks.md
+  - Reference (all documents):
+    - Forward/backward analysis: reference/01-forward-backward-analysis.md
+    - Research synthesis: reference/02-research-synthesis.md
+    - LMSA multisig construction: reference/03-lmsa-multisig-construction.md
+    - Bridge analysis: reference/04-bridge-analysis.md
+    - V-series assessment: reference/05-vseries-assessment.md
+    - ML-DSA spec: reference/06-mladsa-spec.md
+    - ML-DSA security: reference/07-mladsa-security.md
+    - Masking analysis: reference/08-masking-analysis.md
+    - Trapdoor-free comparison: reference/09-trapdoor-free-comparison.md
+    - Nesting & recursive C: reference/10-nesting-and-recursive-C.md
+    - Unified form & synchronized: reference/11-unified-form-and-synchronized.md
+    - Formal verification: reference/12-formal-verification.md
+    - ML-DSA baseline & NIST alignment: reference/13-mldsa-baseline-and-nist-alignment.md
+    - QROM — filling the gap: reference/14-qrom-filling-the-gap.md
+    - FV audit report: reference/15-formal-verification-audit-report.md
+    - Many-time aggregation design: reference/16-many-time-aggregation-design-exploration.md
+    - Construction F specification: reference/17-ml-adsa-F-specification.md
+    - Construction F verification summary: reference/18-construction-F-verification-summary.md
+    - Unified formal specification: reference/21-ml-adsa-unified-formal-specification.md
+    - Gobra code-level proofs: reference/22-gobra-code-level-proofs.md
+    - QRL 2.0 deployment: reference/23-qrl2-deployment-mldsa-verification.md
+    - Decoy privacy: reference/24-decoy-privacy.md
+    - KATs: reference/25-ml-adsa-kats.md
+    - qrysm security audit: reference/26-qrysm-security-audit.md
+    - 3-surface code spec: reference/27-ml-adsa-code-formal-spec-3surface.md
+    - ML-ADSA vs FIPS-204: reference/28-ml-adsa-vs-fips204.md
+    - H5 attestation migration: reference/29-h5-attestation-aggregation-migration.md
+    - Implementation conformance: reference/20-construction-F-implementation-conformance.md
+    - Optimization & constant-time: reference/34-optimization-and-constant-time.md

@@ -10,6 +10,10 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: false
+# Force JavaScript actions onto the current, supported Node 24 runtime (Node 20 is
+# deprecated/being removed for security); applies to every job and step below.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
   build:
     runs-on: ubuntu-latest

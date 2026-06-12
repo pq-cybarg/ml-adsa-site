@@ -7,8 +7,8 @@ checked, single consistent assumption base. Labels as in docs/16/17.
 
 ## 1. Machine-checked artifact inventory (all GREEN)
 
-`formal/check-all.sh` → **19 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Rocq = 29 artifacts**;
-`formal/genuineness.sh` → **34/34** (each weakening breaks its proof). Go: `go test ./...` PASS.
+`formal/check-all.sh` → **20 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Rocq = 30 artifacts**;
+`formal/genuineness.sh` → **35/35** (each weakening breaks its proof). Go: `go test ./...` PASS.
 (Count updated: now includes `ml_adsa_F_hiding.ec` and the later equivalence-class lemmas; `docs/31` is the
 authoritative current tally.)
 
@@ -93,7 +93,7 @@ collision-resistance / injective framing of H, MTH   -- a hash (SHAKE-256)
 
 Named axioms (all of the above kind, none hollow): `expandS_range`, `A_regularity`, `commit_binding`,
 `hvzk_masking`, `prf_security`, `mldsa_extract_sound`, `coq_F_C1_completeness` (imports the Rocq F-C1
-theorem), `dkey_ll`. Verified: zero `admit/Admitted/sorry`; 34/34 genuineness.
+theorem), `dkey_ll`. Verified: zero `admit/Admitted/sorry`; 35/35 genuineness.
 
 ## 4. What is proven, in plain terms
 

@@ -99,3 +99,4 @@ nav:
     - Implementation conformance: reference/20-construction-F-implementation-conformance.md
     - Optimization & constant-time: reference/34-optimization-and-constant-time.md
     - Cross-consistency audit (+ Raccoon/Chipmunk comparison): reference/35-cross-consistency-audit.md
+    - Cryptanalysis review packet: reference/36-cryptanalysis-review-packet.md

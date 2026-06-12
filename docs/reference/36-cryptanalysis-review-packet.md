@@ -86,7 +86,7 @@ cohort) and **B** (wide masks, rejection-free, *computational* HVZK, the regime 
 | C10 | Concurrent (interactive variant) | `ml_adsa_F_concurrent.ec` — **ROS-defense core + HVZK hop mechanized; full reduction SUPPLIED** | A-regularity + commit-binding; **needs cryptanalysis** |
 | C11 | Hiding / signer-set privacy | `ml_adsa_F_hiding.ec : commit_hiding ≤ 2·adv_mlwe` | Module-LWE |
 | C12 | NTT is a ring isomorphism | `ml_adsa_ntt.ec` (convolution) + `ml_adsa_ntt_inv.ec` (CRT inversion) | — (first principles) |
-| C13 | Masking / rounding / Montgomery encoding / NTT-loop recurrence | `ml_adsa_masking.ec`, `ml_adsa_rounding.ec`, `ml_adsa_montgomery.ec`, `ml_adsa_ntt_ct.ec` (`ct_step`/`ct_butterfly`) | — (first principles; integer arithmetic) |
+| C13 | Masking / rounding / Montgomery encoding / NTT loop (CT = DFT) | `ml_adsa_masking.ec`, `ml_adsa_rounding.ec`, `ml_adsa_montgomery.ec`, `ml_adsa_ntt_ct.ec` (`ct_step`/`ct_butterfly`/`ct_correct`) | — (first principles; integer arithmetic) |
 
 **Assumption base (the whole thing):** MLWE, Module-SIS, SelfTargetMSIS (ML-DSA's own); a PRF; a
 collision-resistant/injective hash (SHAKE-256). **No** ROS, AGM, OMDL, trapdoor, SNARK/STARK, or trusted
@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (31 prover artifacts, 156 lemmas = 124 EasyCrypt + 32 Coq, 36/36 genuineness, 6 Gobra;
+**Machine-checked (31 prover artifacts, 158 lemmas = 126 EasyCrypt + 32 Coq, 36/36 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -112,11 +112,12 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
 3. **Soundness of the assumptions themselves** at Category 5 (MLWE/STMSIS/M-SIS concrete hardness) — we
    inherit ML-DSA's parameters; we do not re-derive their security.
 4. **Side-channel / fault resistance** of the deterministic construction (out of proof scope).
-5. **In-place NTT array assembly** — the arithmetic kernels (`modQ`/Montgomery, `ml_adsa_montgomery.ec`)
-   and the Cooley–Tukey butterfly *recurrence* (`ml_adsa_ntt_ct.ec`: `ct_step`/`ct_butterfly`) are now
-   source-proved over Z_q; what remains is the in-place array-index/bit-reversed-twiddle assembly that
-   iterates that proven layer — a representation refinement (no math content), byte-validated against CIRCL
-   + go-qrllib.
+5. **In-place NTT array layout** — the arithmetic kernels (`modQ`/Montgomery, `ml_adsa_montgomery.ec`) and
+   the **full multi-level Cooley–Tukey transform = DFT** (`ml_adsa_ntt_ct.ec`: `ct_step`, `ct_butterfly`,
+   and `ct_correct` by induction on the level count) are now source-proved over Z_q; what remains is only
+   that the in-place array loop with the bit-reversed twiddle schedule realizes that proven recursive
+   transform — a data-layout/permutation refinement (no math content), byte-validated against CIRCL +
+   go-qrllib.
 
 ---
 
@@ -193,7 +194,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (21 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 31 artifacts, 156 lemmas (124 EC + 32 Coq), 36/36, 6 Gobra
+zsh count-artifacts.sh                  # → 31 artifacts, 158 lemmas (126 EC + 32 Coq), 36/36, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

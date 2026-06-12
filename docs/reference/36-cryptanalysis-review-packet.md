@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 162 lemmas = 130 EasyCrypt + 32 Coq, 37/37 genuineness, 6 Gobra;
+**Machine-checked (32 prover artifacts, 168 lemmas = 136 EasyCrypt + 32 Coq, 38/38 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -112,12 +112,16 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
 3. **Soundness of the assumptions themselves** at Category 5 (MLWE/STMSIS/M-SIS concrete hardness) — we
    inherit ML-DSA's parameters; we do not re-derive their security.
 4. **Side-channel / fault resistance** of the deterministic construction (out of proof scope).
-5. **In-place NTT array layout** — the arithmetic kernels (`modQ`/Montgomery, `ml_adsa_montgomery.ec`) and
-   the **full multi-level Cooley–Tukey transform = DFT** (`ml_adsa_ntt_ct.ec`: `ct_step`, `ct_butterfly`,
-   and `ct_correct` by induction on the level count) are now source-proved over Z_q; what remains is only
-   that the in-place array loop with the bit-reversed twiddle schedule realizes that proven recursive
-   transform — a data-layout/permutation refinement (no math content), byte-validated against CIRCL +
-   go-qrllib.
+5. **In-place NTT array loop (iterative realization)** — the arithmetic kernels (`modQ`/Montgomery,
+   `ml_adsa_montgomery.ec`), the **full multi-level Cooley–Tukey transform = DFT** (`ml_adsa_ntt_ct.ec`:
+   `ct_step`, `ct_butterfly`, `ct_correct`), **and the flat-array factor-tree transform** (`ml_adsa_ntt_crt.ec`:
+   `polyL_cat` = array low/high split, `polyL_bfly` = array butterfly write-back, **`ct_correct`**'s sibling
+   **`ntt_tree_correct`** = the flat `take`/`drop`/`bfly`/concat tree computes the per-root evaluation vector
+   for any well-formed twiddle schedule) are now source-proved over Z_q. What remains is only **(a)** that the
+   *iterative* in-place loop (literal nested `while` + `zetas[k]=ζ^brv(k)` + stride mutation) realizes that
+   proven recursive factor-tree transform, and **(b)** that FIPS-204's bit-reversed zeta schedule satisfies the
+   `wf` predicate — both no-new-math (imperative↔recursive refinement + concrete instantiation), byte-validated
+   against CIRCL + go-qrllib + pinned KATs.
 
 ---
 
@@ -194,7 +198,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 162 lemmas (130 EC + 32 Coq), 37/37, 6 Gobra
+zsh count-artifacts.sh                  # → 32 artifacts, 168 lemmas (136 EC + 32 Coq), 38/38, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

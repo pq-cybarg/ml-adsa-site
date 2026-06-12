@@ -10,8 +10,8 @@ CIRCL/go-qrllib · **[named]** assumed primitive · **[—]** not applicable.
 
 ## 1. The three surfaces and how they relate
 
-- **Proofs** (`formal/`): the algorithm is verified abstractly — 31 machine-checked artifacts (21 EC +
-  5 EasyPQC + 5 Coq), 36/36 EC genuineness; plus **Gobra** code-level proofs of the structural logic
+- **Proofs** (`formal/`): the algorithm is verified abstractly — 32 machine-checked artifacts (22 EC +
+  5 EasyPQC + 5 Coq), 37/37 EC genuineness; plus **Gobra** code-level proofs of the structural logic
   (`formal/gobra/`, 6 theorems, 5/5 genuineness).
 - **Standalone Go** (`go-mladsa/`): the reference implementation; CIRCL-cross-checked; the KAT source of
   truth. `go test ./...` PASS.
@@ -74,8 +74,8 @@ fundamental/known, 3–6 are integration/hardening tracked in docs/23 and docs/2
 ## 4. Reproduce (all three surfaces)
 
 ```
-formal/check-all.sh            # proofs: 31 artifacts GREEN
-formal/genuineness.sh          # 36/36
+formal/check-all.sh            # proofs: 32 artifacts GREEN
+formal/genuineness.sh          # 37/37
 formal/gobra/run.sh + genuineness.sh   # Gobra: 6 theorems, 5/5
 cd go-mladsa && go test ./...                    # standalone (incl. TestKAT_*)
 cd qrl-integration/ml-adsa/qrysm && go test ./mladsa/   # qrysm (same KATs, go-qrllib)

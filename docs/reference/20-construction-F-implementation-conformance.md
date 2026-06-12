@@ -63,8 +63,8 @@ signed message (`bindMsg`), so `c̃*` binds `part_root` (§6.4). `P ⊆ REG` is 
 
 ## 3. Honest epistemic boundary (not overclaimed)
 
-- **What is proven (machine-checked):** the *algorithm/math* — 31 Rocq/EasyCrypt/EasyPQC artifacts,
-  36/36 genuineness, zero admits (docs/18).
+- **What is proven (machine-checked):** the *algorithm/math* — 32 Rocq/EasyCrypt/EasyPQC artifacts,
+  37/37 genuineness, zero admits (docs/18).
 - **What is validated (measured):** the *Go code* realizes that algorithm — every layer round-trips
   and, where a signature is produced, the **independent Cloudflare CIRCL** ML-DSA-87 verifier accepts
   it and rejects tampering (this §1 test column). This is the field-standard for implementation

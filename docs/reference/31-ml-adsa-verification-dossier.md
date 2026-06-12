@@ -5,8 +5,8 @@ dossier ties **specification ↔ code ↔ machine-checked proofs ↔ tests** int
 "verification of the entire process" — and states, honestly, what each piece of evidence does and does not
 establish.
 
-> Reproduce everything: `formal/check-all.sh` (30 prover artifacts, ALL GREEN), `formal/genuineness.sh`
-> (35 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
+> Reproduce everything: `formal/check-all.sh` (31 prover artifacts, ALL GREEN), `formal/genuineness.sh`
+> (36 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
 > `go-mladsa/` and the qrysm fork, and the three live demos (`cmd/mladsa-devnet`, `mladsa-hieragg`,
 > `mladsa-epochnet`).
 
@@ -49,11 +49,15 @@ and machine-checked at the arithmetic level (`ml_adsa_montgomery.ec`, axiom-free
 the implementations use are proven to compute the abstract `Z_q` ring — the reference int64 Euclidean
 reduction `modQ` (ring-respecting), and the standard Dilithium **int32 Montgomery** reduction the external
 FIPS-204 verifiers use (`montred_exact`/`montred_mont`/`montred_range`/`fqmul`, with `q·qinv ≡ 1 mod 2³²`
-evaluated by EC). What is **not yet source-proved** is the *structural transcription* of each `ntt`/`intt`
-loop — that the loop, built on these proven kernels, computes the negacyclic NTT/INTT over `Z_q`; this
-remains byte-validated against CIRCL + go-qrllib (not yet a source proof). This is a pure
-**implementation-conformance** matter, **not a security assumption** — the algorithm-level proofs never
-invoke the NTT.
+evaluated by EC). The **structural transcription** of the NTT loop is now also source-proved at the
+recurrence level (`ml_adsa_ntt_ct.ec`, axiom-free): the radix-2 Cooley–Tukey **butterfly the loop iterates**
+is proven to compute the DFT recurrence over `Z_q` — `ct_step` (DFT_{2m} = DFT_m(even) + wᵏ·DFT_m(odd)) and
+`ct_butterfly` (the negacyclic ± form X[k]=E+wᵏO, X[k+m]=E−wᵏO, *exactly* the code's
+`a[j]=t1+t2; a[j+len]=t1−t2`). What now remains is **only** the in-place ARRAY-INDEX assembly — iterating
+that proven layer over `start`/`j` with the bit-reversed twiddle schedule — a representation refinement with
+**no remaining mathematical content**, still byte-validated against CIRCL + go-qrllib. This whole boundary is
+a pure **implementation-conformance** matter, **not a security assumption** — the algorithm-level proofs
+never invoke the NTT.
 
 ---
 
@@ -61,23 +65,23 @@ invoke the NTT.
 
 | Prover | Where | Count | Result |
 |---|---|---|---|
-| EasyCrypt (classical) | opam switch `discus-verified` | 20 files | green |
+| EasyCrypt (classical) | opam switch `discus-verified` | 21 files | green |
 | EasyCrypt (QROM / EasyPQC) | opam switch `easypqc`, via `ec-quantum.sh` | 5 files | green |
 | Coq / Rocq (`nsatz` over R) | system | 5 files | green |
-| **Total prover artifacts** | `formal/check-all.sh` | **29** | **ALL GREEN** |
+| **Total prover artifacts** | `formal/check-all.sh` | **31** | **ALL GREEN** |
 | Gobra (ETH, Docker) | `formal/gobra/` | 6 theorems | green |
-| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **35** | 35/35 |
+| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **36** | 36/36 |
 
-Lemma tally: **121 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 153 machine-checked**, plus 6
-Gobra code-level theorems. (Artifact *file* count is 29; lemma count is 153 — both framings are used in
+Lemma tally: **124 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 156 machine-checked**, plus 6
+Gobra code-level theorems. (Artifact *file* count is 31; lemma count is 156 — both framings are used in
 the literature; do not conflate them. All figures are produced by `formal/count-artifacts.sh`, the single
 source of truth.)
 
 > **Discrepancy note.** Earlier prose used a deprecated lemma tally of "77 (= 72 EC + 5 Coq)", which
 > conflated *5 Coq files* with *5 Coq lemmas* (Coq has 32 lemmas/theorems) and predated the masking /
 > rounding / NTT / NTT-inversion / GHHM additions; older docs also quote stale artifact counts (23, 24).
-> The authoritative current numbers are those of `formal/count-artifacts.sh`: **30 artifacts**
-> (20 classical + 5 quantum + 5 Coq) and **153 lemmas** (121 EC + 32 Coq), with `genuineness.sh` at 35/35.
+> The authoritative current numbers are those of `formal/count-artifacts.sh`: **31 artifacts**
+> (21 classical + 5 quantum + 5 Coq) and **156 lemmas** (124 EC + 32 Coq), with `genuineness.sh` at 36/36.
 > The cross-consistency audit `docs/35` reconciles every document to these.
 
 ---
@@ -95,7 +99,7 @@ classical, ECq = EasyCrypt QROM, Coq = Coq/Rocq, Gob = Gobra.
 | 4 | Core aggregate correctness (§5) | `AggregateRejfree`, `AggregateM1` (`mladsa.go`) | `ml_adsa_identity.v` (reconstruction identity) — Coq | `attestation_aggregation_test.go` |
 | 5 | Decentralized combine = secret-key combine (§5.3) | `CombineFromPublic`, `SharedChallenge` (`decentralized.go`), `ConsensusAggregate(Labeled)` (`consensus.go`) | reconstruction identity — Coq; EUF reduction — EC | `TestDecentralized_EqualsAggregateF` |
 | 6 | Verify = FIPS-204 (§5.4) | `Verify` (`mldsa87.go`) | inherited by T1/T6 (verifier is the model's `verify`) | CIRCL + go-qrllib byte-accept |
-| 7 | EUF-CMA (T1; §8.2) | aggregate + verify | `ml_adsa_euf.ec : msufcma_uncond` (≈ line 153) — EC | — |
+| 7 | EUF-CMA (T1; §8.2) | aggregate + verify | `ml_adsa_euf.ec : msufcma_uncond` (≈ line 156) — EC | — |
 | 8 | SUF-CMA (T2) | aggregate + verify | `ml_adsa_suf.ec : sufcma_uncond` — EC | — |
 | 9 | Rogue-key collapse (T3, F-C5) | `MemberKeyGen`, `VerifyPoP` (`construction_f.go`) | `ml_adsa_rogue_proof.ec : rogue_reduces_to_single` — EC | `f_construction_test.go` |
 | 10 | No-new-power / extraction (T4) | combine | `ml_adsa_nnp_proof.ec : new_power_reduces_to_sis` — EC | — |
@@ -193,10 +197,10 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 ## 7. How to reproduce (commands)
 
 ```
-# Algorithm proofs (30 artifacts): EasyCrypt classical+QROM + Coq
-cd formal && zsh check-all.sh                 # → ALL GREEN (20 classical + 5 quantum + 5 Coq = 29)
-zsh count-artifacts.sh                         # → 30 artifacts, 153 lemmas (121 EC + 32 Coq), 35/35, 6 Gobra
-zsh genuineness.sh                            # → 35/35 (weaken axiom ⇒ proof breaks)
+# Algorithm proofs (31 artifacts): EasyCrypt classical+QROM + Coq
+cd formal && zsh check-all.sh                 # → ALL GREEN (21 classical + 5 quantum + 5 Coq = 31)
+zsh count-artifacts.sh                         # → 31 artifacts, 156 lemmas (124 EC + 32 Coq), 36/36, 6 Gobra
+zsh genuineness.sh                            # → 36/36 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)
 cd formal/gobra && zsh run.sh                 # → 6 theorems, "Gobra found 0 errors"; zsh genuineness.sh → 5/5
 # Implementation conformance + KATs (CIRCL + go-qrllib byte-accept)

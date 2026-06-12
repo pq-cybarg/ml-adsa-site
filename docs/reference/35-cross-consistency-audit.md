@@ -16,9 +16,9 @@ Compiled 2026-06-11.
 artifact set is defined) plus the source files. Current output:
 
 ```
-Prover artifacts : 30   (20 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
-Machine-checked lemmas : 153   (121 EasyCrypt + 32 Coq)
-Genuineness checks : 35/35
+Prover artifacts : 31   (21 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
+Machine-checked lemmas : 156   (124 EasyCrypt + 32 Coq)
+Genuineness checks : 36/36
 Gobra theorems : 6   (5/5 Gobra genuineness)
 ```
 
@@ -132,7 +132,7 @@ adversarially fact-checked against the source text; see the notes under the tabl
 | Per-signer key/state | small | **large secret-key tree state** (seed-derivable, top layers cached); **public key small (~1 KB)** | small ML-DSA key (pk 2592 B) |
 | Participants | threshold `t` up to ~**1024** | benchmarked to 8192 signers; bounded #time-slots (2^τ) | committee `N` up to deployment cap (qrysm: 128) |
 | Assumptions | "standard lattice": **Hint-MLWE + SelfTargetMSIS** (Hint-MLWE → MLWE) + PRF | **(ring-)SIS + ROM** (Ajtai hash; CR ⇐ SIS) | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
-| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **153 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
+| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **156 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
 | Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates many **same-message** sigs valid at one slot (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
 
 **Source-check notes (corrections applied after literature review).** (a) Venue is **EUROCRYPT 2024**,
@@ -160,10 +160,10 @@ commitment), which is also what gives ROS-resistance with **no AGM/OMDL**.
 
 All findings in §3 discharged:
 
-- **Source of truth** locked: `formal/count-artifacts.sh` → **30 artifacts / 153 lemmas (121 EC + 32 Coq) /
-  35-35** genuineness / 6 Gobra. Successive passes: count-audit 29/134/33 → proof-closure 29/137/34 (§6) →
-  encoding-conformance 30/153/35 (the new `ml_adsa_montgomery.ec`, §6). Re-verified: `check-all.sh` ALL
-  GREEN, `go-mladsa` builds.
+- **Source of truth** locked: `formal/count-artifacts.sh` → **31 artifacts / 156 lemmas (124 EC + 32 Coq) /
+  36-36** genuineness / 6 Gobra. Successive passes (§6): count-audit 29/134/33 → proof-closure 29/137/34 →
+  encoding-conformance 30/153/35 (`ml_adsa_montgomery.ec`) → CT-transcription 31/156/36
+  (`ml_adsa_ntt_ct.ec`). Re-verified: `check-all.sh` ALL GREEN, `go-mladsa` builds.
 - **Counts** corrected on the canonical-current surface (paper, README, docs/18/30/31/32) and mixed docs
   (13, 14, 17, 20, 21, 27, 28, 29). Internal contradictions resolved: paper 39/77→134; docs/31
   19-vs-15→19; docs/27 24-vs-29→29; docs/17 F-C11 [proven]/[open]/[partly] → proven; docs/29 H4-full
@@ -182,7 +182,7 @@ All findings in §3 discharged:
   here + to docs/30/31/`count-artifacts.sh`; their body numbers are preserved as the historical record.
   (docs/04 is a still-current standalone impossibility result — not bannered.)
 - **Public site** re-synced via the new `ml-adsa-site/sync-docs.sh` (36 reference copies refreshed + docs/35
-  added to nav; landing-page lemma count 77→153).
+  added to nav; landing-page lemma count 77→156).
 
 ---
 
@@ -213,20 +213,27 @@ machine-checked (proof-closure pass, counts → 137 / 34-34):
    (`reprog_round_equiv`) is lifted by a while-loop coupling to the whole qs-query signing oracle: the
    real-RO signer and the reprogramming HVZK simulator are perfectly indistinguishable, closing the
    "multi-query seam" the `ghhm.ec` header flagged. Genuineness check added (dropping the per-round call
-   breaks it) → 35/35.
+   breaks it) → 36/36.
 
 **Encoding-conformance pass (counts → 153 / 35-35; 30 artifacts).** The "bit-level Montgomery encoding"
-residual is now begun and machine-checked at the arithmetic level: new `ml_adsa_montgomery.ec` (16 lemmas,
-**axiom-free** — even `q·qinv ≡ 1 mod 2³²` is evaluated by EC) proves both integer reductions the
-implementations use compute the abstract Z_q ring: (i) the reference `modQ` (int64 Euclidean reduction,
-ring-respecting — `modQ_cong`/`modQ_mul`/`modQ_add`), and (ii) the standard Dilithium **int32 Montgomery**
-reduction the external FIPS-204 verifiers use (`montred_exact`: exact ÷R; `montred_mont`: `R·montred a ≡ a
-(mod q)`; `montred_range`: output in (−q,q); `fqmul` butterfly multiply). +1 genuineness check (a wrong
-`qinv` constant breaks `montred_exact`). What remains for full NTT *source*-conformance is the structural
-transcription of each `ntt`/`intt` loop — proving the loop (built on these now-proven arithmetic kernels)
-computes the negacyclic NTT/INTT over Z_q — which is still only byte-validated against CIRCL + go-qrllib,
-not yet source-proved. And independent human cryptanalysis (esp. the interactive concurrent variant)
-remains the decisive gate.
+residual: new `ml_adsa_montgomery.ec` (16 lemmas, **axiom-free** — even `q·qinv ≡ 1 mod 2³²` is evaluated by
+EC) proves both integer reductions the implementations use compute the abstract Z_q ring: (i) the reference
+`modQ` (int64 Euclidean reduction, ring-respecting — `modQ_cong`/`modQ_mul`/`modQ_add`), and (ii) the
+standard Dilithium **int32 Montgomery** reduction the external FIPS-204 verifiers use (`montred_exact`: exact
+÷R; `montred_mont`: `R·montred a ≡ a (mod q)`; `montred_range`: output in (−q,q); `fqmul` butterfly multiply).
++1 genuineness check (a wrong `qinv` constant breaks `montred_exact`).
+
+**CT-transcription pass (counts → 156 / 36-36; 31 artifacts).** The NTT-loop structural transcription is now
+source-proved at the recurrence level: new `ml_adsa_ntt_ct.ec` (3 lemmas, **axiom-free**) proves the radix-2
+Cooley–Tukey **butterfly the loop iterates** computes the DFT recurrence over Z_q — `big_even_odd` (the
+decimation split), `ct_step` (DFT_{2m} = DFT_m(even) + wᵏ·DFT_m(odd)), and `ct_butterfly` (the negacyclic ±
+form X[k]=E+wᵏO, X[k+m]=E−wᵏO — *exactly* the code's `a[j]=t1+t2; a[j+len]=t1−t2`). +1 genuineness check
+(flipping the butterfly minus to plus breaks `ct_butterfly`). With `ml_adsa_ntt.ec` (DFT is
+convolution-respecting) and `ml_adsa_ntt_inv.ec` (DFT invertible), the algorithm is a correct invertible
+negacyclic NTT over Z_q. **The residual is now only the in-place ARRAY-INDEX assembly** (iterating the proven
+layer over `start`/`j` with the bit-reversed twiddle schedule) — a representation refinement with no
+remaining mathematical content, byte-validated against CIRCL + go-qrllib. Independent human cryptanalysis
+(esp. the interactive concurrent variant) remains the decisive gate.
 
 ---
 

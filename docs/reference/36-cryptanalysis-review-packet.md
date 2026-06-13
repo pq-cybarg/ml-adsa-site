@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 189 lemmas = 157 EasyCrypt + 32 Coq, 41/41 genuineness, 6 Gobra;
+**Machine-checked (32 prover artifacts, 191 lemmas = 159 EasyCrypt + 32 Coq, 42/42 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -124,12 +124,13 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
    and **(b)** FIPS-204's bit-reversed `ζ=1753` schedule satisfies `wf` (`negtree_wf`; `negtree_computes_eval`
    gives the per-root evaluations for the real schedule). **Termination is proved** (`tdepth_negtree` +
    `forest_iter_leaves`), so `fips_ntt_loop` is *unconditional*: `size l` (= 8) levels on the FIPS-204 schedule
-   yield the evaluation vector. The sole residual is the **model↔code conformance** step (same as all of
-   surface B): that the Go source's literal mutable `[256]int64` array with in-place `a[j]`/`a[j+len]` writes
-   refines this proved functional model (which splits list blocks via `take`/`drop`; `flat_one_level` shows one
-   level's array output is exactly `lo+s·hi ‖ lo−s·hi`). No algorithmic content is left — only the
-   array-representation refinement, established by the byte-exact KATs against CIRCL + go-qrllib. (NB: the NTT
-   is implementation-conformance, **not** a security assumption — no reduction invokes it.)
+   yield the evaluation vector. **The absolute-index arithmetic is machine-checked too** (`jloop_eq`: the Go
+   inner loop `output[j]=a[j]+z·a[j+m]`, `output[j+m]=a[j]−z·a[j+m]` equals the block butterfly; `jloop_forest`
+   ties it to one `forest_step`). The sole residual is the **loop control-flow scaffolding** (the `while`
+   bounds + `k`-counter over `zetas[k]` driving `jloop` over the right segments/levels) — the same model↔code
+   conformance step all of surface B covers, established by the byte-exact KATs against CIRCL + go-qrllib; no
+   algorithmic, index, or termination content is left. (NB: the NTT is implementation-conformance, **not** a
+   security assumption — no reduction invokes it.)
 
 ---
 
@@ -206,7 +207,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 189 lemmas (157 EC + 32 Coq), 41/41, 6 Gobra
+zsh count-artifacts.sh                  # → 32 artifacts, 191 lemmas (159 EC + 32 Coq), 42/42, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

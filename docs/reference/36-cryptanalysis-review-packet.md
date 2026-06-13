@@ -111,7 +111,14 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
    mechanized. The deployed scheme avoids this (C9), but if an interactive variant is used, this is open.
 3. **Soundness of the assumptions themselves** at Category 5 (MLWE/STMSIS/M-SIS concrete hardness) — we
    inherit ML-DSA's parameters; we do not re-derive their security.
-4. **Side-channel / fault resistance** of the deterministic construction (out of proof scope).
+4. **Side-channel / fault resistance** of the deterministic construction. *Constant-time posture is now
+   audited and partly machine-backed* (`docs/34 §2/§2a/§2b`): `modQ`/`cabs` are branchless; the secret
+   arithmetic path is straight-line; `DeriveNonce` is rejection-free (Construction B); `SampleInBall`/
+   `ExpandA` time only on public data; and the **NTT's data-independent control flow / memory-access
+   pattern is machine-checked** (`ml_adsa_ntt_imp.ec`: every loop bound and index is counter-derived, never
+   value-derived). Residual for review: Construction-A rejection attempt-count (leaks attempts, not the
+   key), `%`-by-`q` on exotic ISAs, *fault* injection on the deterministic nonce (§6.3), and an automated
+   `dudect`/microarchitectural pass (standardization deliverable).
 5. **In-place NTT array loop (iterative realization)** — the arithmetic kernels (`modQ`/Montgomery,
    `ml_adsa_montgomery.ec`), the **full multi-level Cooley–Tukey transform = DFT** (`ml_adsa_ntt_ct.ec`:
    `ct_step`, `ct_butterfly`, `ct_correct`), **and the flat-array factor-tree transform** (`ml_adsa_ntt_crt.ec`:

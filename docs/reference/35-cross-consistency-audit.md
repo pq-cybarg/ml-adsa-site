@@ -17,8 +17,8 @@ artifact set is defined) plus the source files. Current output:
 
 ```
 Prover artifacts : 32   (22 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
-Machine-checked lemmas : 194   (162 EasyCrypt + 32 Coq)
-Genuineness checks : 43/43
+Machine-checked lemmas : 199   (167 EasyCrypt + 32 Coq)
+Genuineness checks : 44/44
 Gobra theorems : 6   (5/5 Gobra genuineness)
 ```
 
@@ -30,7 +30,7 @@ Counting conventions (adversary-checkable): an **artifact** is one `.ec`/`.v` fi
 `formal/gobra/integrity.go`. **Zero `admit`/`Admitted`/`sorry`** tactics exist (every textual
 match is inside a comment such as "admit-free" / "no admit").
 
-The deprecated tallies seen in older prose — **77** (= 72 EC + 5 Coq), **43**, **45**, **23**
+The deprecated tallies seen in older prose — **77** (= 72 EC + 5 Coq), **44**, **45**, **23**
 (= 14 + 4 + 5), **24** — are all superseded by the figures above. The **77** conflated *5 Coq
 files* with *5 Coq lemmas* (Coq actually has 32 lemmas/theorems) and predates the masking /
 rounding / NTT / NTT-inversion / GHHM additions.
@@ -132,7 +132,7 @@ adversarially fact-checked against the source text; see the notes under the tabl
 | Per-signer key/state | small | **large secret-key tree state** (seed-derivable, top layers cached); **public key small (~1 KB)** | small ML-DSA key (pk 2592 B) |
 | Participants | threshold `t` up to ~**1024** | benchmarked to 8192 signers; bounded #time-slots (2^τ) | committee `N` up to deployment cap (qrysm: 128) |
 | Assumptions | "standard lattice": **Hint-MLWE + SelfTargetMSIS** (Hint-MLWE → MLWE) + PRF | **(ring-)SIS + ROM** (Ajtai hash; CR ⇐ SIS) | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
-| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **194 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
+| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **199 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
 | Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates many **same-message** sigs valid at one slot (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
 
 **Source-check notes (corrections applied after literature review).** (a) Venue is **EUROCRYPT 2024**,
@@ -160,9 +160,9 @@ commitment), which is also what gives ROS-resistance with **no AGM/OMDL**.
 
 All findings in §3 discharged:
 
-- **Source of truth** locked: `formal/count-artifacts.sh` → **32 artifacts / 194 lemmas (162 EC + 32 Coq) /
+- **Source of truth** locked: `formal/count-artifacts.sh` → **32 artifacts / 199 lemmas (167 EC + 32 Coq) /
   36-36** genuineness / 6 Gobra. Successive passes (§6): count-audit 29/134/33 → proof-closure 29/137/34 →
-  encoding-conformance 30/153/35 (`ml_adsa_montgomery.ec`) → CT-transcription 31/194/36
+  encoding-conformance 30/153/35 (`ml_adsa_montgomery.ec`) → CT-transcription 31/199/36
   (`ml_adsa_ntt_ct.ec`). Re-verified: `check-all.sh` ALL GREEN, `go-mladsa` builds.
 - **Counts** corrected on the canonical-current surface (paper, README, docs/18/30/31/32) and mixed docs
   (13, 14, 17, 20, 21, 27, 28, 29). Internal contradictions resolved: paper 39/77→134; docs/31
@@ -182,7 +182,7 @@ All findings in §3 discharged:
   here + to docs/30/31/`count-artifacts.sh`; their body numbers are preserved as the historical record.
   (docs/04 is a still-current standalone impossibility result — not bannered.)
 - **Public site** re-synced via the new `ml-adsa-site/sync-docs.sh` (36 reference copies refreshed + docs/35
-  added to nav; landing-page lemma count 77→194).
+  added to nav; landing-page lemma count 77→199).
 
 ---
 
@@ -213,7 +213,7 @@ machine-checked (proof-closure pass, counts → 137 / 34-34):
    (`reprog_round_equiv`) is lifted by a while-loop coupling to the whole qs-query signing oracle: the
    real-RO signer and the reprogramming HVZK simulator are perfectly indistinguishable, closing the
    "multi-query seam" the `ghhm.ec` header flagged. Genuineness check added (dropping the per-round call
-   breaks it) → 43/43.
+   breaks it) → 44/44.
 
 **Encoding-conformance pass (counts → 153 / 35-35; 30 artifacts).** The "bit-level Montgomery encoding"
 residual: new `ml_adsa_montgomery.ec` (16 lemmas, **axiom-free** — even `q·qinv ≡ 1 mod 2³²` is evaluated by
@@ -223,7 +223,7 @@ standard Dilithium **int32 Montgomery** reduction the external FIPS-204 verifier
 ÷R; `montred_mont`: `R·montred a ≡ a (mod q)`; `montred_range`: output in (−q,q); `fqmul` butterfly multiply).
 +1 genuineness check (a wrong `qinv` constant breaks `montred_exact`).
 
-**CT-transcription pass (counts → 194 / 36-36; 32 artifacts).** The NTT-loop structural transcription is now
+**CT-transcription pass (counts → 199 / 36-36; 32 artifacts).** The NTT-loop structural transcription is now
 source-proved **in full**: new `ml_adsa_ntt_ct.ec` (5 lemmas, **axiom-free**) proves the radix-2 Cooley–Tukey
 transform = the DFT over Z_q. `big_even_odd` (the decimation split), `ct_step` (the recurrence DFT_{2m} =
 DFT_m(even) + wᵏ·DFT_m(odd)), `ct_butterfly` (its negacyclic ± form X[k]=E+wᵏO, X[k+m]=E−wᵏO — *exactly* the
@@ -243,7 +243,7 @@ from `ntt.ec`), i.e. each butterfly preserves evaluation at the roots `ρᵐ=±s
 the in-place *stride* loop is correct (it maintains polynomials-mod-CRT-factors), composing down the factor
 tree to the per-root evaluations. +1 genuineness (replacing the high half `a_hi` by `a_lo` breaks `crt_split`).
 
-**Flat-array factor-tree pass (counts → 194 / 38-38; 32 artifacts).** `ml_adsa_ntt_crt.ec` is extended from
+**Flat-array factor-tree pass (counts → 199 / 38-38; 32 artifacts).** `ml_adsa_ntt_crt.ec` is extended from
 the abstract split to the **literal flat array**, closing the data-layout content that was previously only
 byte-validated:
 - `polyMXnE` — the general monomial shift `((Xᵐ)·p).[k] = p.[k−m]` (by induction on `m`).
@@ -280,7 +280,7 @@ the unmodified verifier's `γ1−β = 524168` ceiling for **provable** `N ≤ 18
 ceiling; `√N` law reaches the ceiling near `N ≈ 16 000`). Independent human cryptanalysis (esp. the
 interactive concurrent variant, and the rejection-free leakage question) remains the decisive gate.
 
-**NTT loop fully closed — termination + literal index arithmetic (counts → 194 / 42-42; 32 artifacts).**
+**NTT loop fully closed — termination + literal index arithmetic (counts → 199 / 42-42; 32 artifacts).**
 `ml_adsa_ntt_crt.ec` adds **termination** (`tdepth`/`forest_step_depth`/`forest_iter_leaves`/
 `forest_loop_complete` — `tdepth t` levels make the frontier all-leaves; `tdepth_negtree = size l = 8`), the
 unconditional end-to-end **`fips_ntt_loop`** (8 levels on the FIPS-204 schedule = the per-root eval vector),

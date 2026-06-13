@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 194 lemmas = 162 EasyCrypt + 32 Coq, 43/43 genuineness, 6 Gobra;
+**Machine-checked (32 prover artifacts, 199 lemmas = 167 EasyCrypt + 32 Coq, 44/44 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -126,11 +126,13 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
    `forest_iter_leaves`), so `fips_ntt_loop` is *unconditional*: `size l` (= 8) levels on the FIPS-204 schedule
    yield the evaluation vector. **The absolute-index arithmetic is machine-checked too** (`jloop_eq`: the Go
    inner loop `output[j]=a[j]+z·a[j+m]`, `output[j+m]=a[j]−z·a[j+m]` equals the block butterfly; `jloop_forest`
-   ties it to one `forest_step`). The sole residual is the **loop control-flow scaffolding** (the `while`
-   bounds + `k`-counter over `zetas[k]` driving `jloop` over the right segments/levels) — the same model↔code
-   conformance step all of surface B covers, established by the byte-exact KATs against CIRCL + go-qrllib; no
-   algorithmic, index, or termination content is left. (NB: the NTT is implementation-conformance, **not** a
-   security assumption — no reduction invokes it.)
+   ties it to one `forest_step`). **The bit-reversed precompute is machine-checked too** (`brv8_twiddle_rec`:
+   `brv8 = bsrev 8` satisfies negtree's recursion `brv8 1 = 2⁷`, `brv8(2k)=brv8 k/2`, `brv8(2k+1)=brv8 k/2+2⁷`,
+   so `zetas[k]=ζ^brv8(k)` enumerates the tree's twiddles in BFS order). The sole residual is the **literal
+   `while`-loop syntax / mutable-array representation** (an EasyCrypt `proc` over a Go `[256]int64` vs the
+   list-block model) — the same model↔code conformance all of surface B covers, established by the byte-exact
+   KATs against CIRCL + go-qrllib; no algorithmic, index, termination, or twiddle-schedule content is left.
+   (NB: the NTT is implementation-conformance, **not** a security assumption — no reduction invokes it.)
 
 ---
 
@@ -207,7 +209,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 194 lemmas (162 EC + 32 Coq), 43/43, 6 Gobra
+zsh count-artifacts.sh                  # → 32 artifacts, 199 lemmas (167 EC + 32 Coq), 44/44, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

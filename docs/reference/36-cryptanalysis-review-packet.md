@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 174 lemmas = 142 EasyCrypt + 32 Coq, 39/39 genuineness, 6 Gobra;
+**Machine-checked (32 prover artifacts, 180 lemmas = 148 EasyCrypt + 32 Coq, 40/40 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -117,11 +117,15 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
    `ct_step`, `ct_butterfly`, `ct_correct`), **and the flat-array factor-tree transform** (`ml_adsa_ntt_crt.ec`:
    `polyL_cat` = array low/high split, `polyL_bfly` = array butterfly write-back, **`ct_correct`**'s sibling
    **`ntt_tree_correct`** = the flat `take`/`drop`/`bfly`/concat tree computes the per-root evaluation vector
-   for any well-formed twiddle schedule) are now source-proved over Z_q. What remains is only **(a)** that the
-   *iterative* in-place loop (literal nested `while` + `zetas[k]=ζ^brv(k)` + stride mutation) realizes that
-   proven recursive factor-tree transform, and **(b)** that FIPS-204's bit-reversed zeta schedule satisfies the
-   `wf` predicate — both no-new-math (imperative↔recursive refinement + concrete instantiation), byte-validated
-   against CIRCL + go-qrllib + pinned KATs.
+   for any well-formed twiddle schedule) are now source-proved over Z_q — **as are both items that were
+   previously open:** **(a)** the *iterative, level-by-level* loop computes the same transform as the
+   recursion (`forest_step` = one `length`-level; `forest_step_inv` = one level preserves the transform;
+   `forest_loop_correct` = once all blocks are size-1 leaves the flat array is `ntt_tree t a`; i.e. BFS = DFS),
+   and **(b)** FIPS-204's bit-reversed `ζ=1753` schedule satisfies `wf` (`negtree_wf`; `negtree_computes_eval`
+   gives the per-root evaluations for the real schedule). The sole residual is the flat-array index arithmetic
+   realizing the block segmentation + the finite 8-level termination count — pure data-layout/finite-check,
+   byte-validated against CIRCL + go-qrllib + pinned KATs. (NB: the NTT is implementation-conformance, **not**
+   a security assumption — no reduction invokes it.)
 
 ---
 
@@ -198,7 +202,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 174 lemmas (142 EC + 32 Coq), 39/39, 6 Gobra
+zsh count-artifacts.sh                  # → 32 artifacts, 180 lemmas (148 EC + 32 Coq), 40/40, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

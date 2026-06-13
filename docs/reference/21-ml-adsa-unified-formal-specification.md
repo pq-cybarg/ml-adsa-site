@@ -162,7 +162,7 @@ Per property × approach: **A**=algorithm-proof, **C**=code-proof (Gobra), **M**
 | P17 cross-chain | ✅ Coq `key_indep_of_ctx` | — | ✅ `TestF_EMP_CrossChain` |
 | Merkle pad well-formed | (structural) | ✅ Gobra `nextPow2` | ✅ `TestF_Merkle` |
 
-Totals: **32 algorithm-proof artifacts** (22 EC + 5 EasyPQC + 5 Coq), all green, 39/39 EC
+Totals: **32 algorithm-proof artifacts** (22 EC + 5 EasyPQC + 5 Coq), all green, 40/40 EC
 genuineness; **6 Gobra code-proof theorems**, 5/5 Gobra genuineness; **Go**: `go test ./...` PASS,
 `go vet` clean, every signing path CIRCL-verified.
 
@@ -210,7 +210,7 @@ levels.
 Run all evidence:
 ```
 formal/check-all.sh            # 32 algorithm-proof artifacts GREEN
-formal/genuineness.sh          # 39/39 EC genuineness
+formal/genuineness.sh          # 40/40 EC genuineness
 formal/gobra/run.sh            # Gobra code-proofs GREEN
 formal/gobra/genuineness.sh    # 5/5 Gobra genuineness
 cd go-mladsa && go test ./...  # all approaches, CIRCL-verified

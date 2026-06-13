@@ -34,9 +34,9 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 
 | | |
 |---|---|
-| **Prover artifacts** | **31** — 21 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
-| **Machine-checked lemmas** | **174** (142 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
-| **Genuineness** | **39/39** — each proof's named primitive is weakened and the proof confirmed to break |
+| **Prover artifacts** | **32** — 22 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
+| **Machine-checked lemmas** | **180** (148 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
+| **Genuineness** | **40/40** — each proof's named primitive is weakened and the proof confirmed to break |
 | **Implementation** | reference impl byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors |
 
 Highlights of the formal development:
@@ -52,6 +52,13 @@ Highlights of the formal development:
 - **Lattice arithmetic from first principles:** perfect-HVZK masking change-of-variables, FIPS-204
   rounding/hint decomposition, and the **NTT as a complete ring isomorphism** — the convolution theorem
   (`NTT(p·q) = NTT(p) ⊙ NTT(q)`) *and* the CRT inversion (`INTT∘NTT = id`).
+- **The whole NTT algorithm, not just the math:** the multi-level Cooley–Tukey transform = the DFT
+  (`ct_correct`), the **flat-array** butterfly layout (`polyL_cat`, `polyL_bfly`), the factor-tree transform
+  computes the per-root evaluation vector (`ntt_tree_correct`), **FIPS-204's own bit-reversed `ζ=1753`
+  schedule satisfies the well-formedness predicate** (`negtree_wf`), and the **iterative, level-by-level loop
+  the code actually uses equals the recursion** — BFS = DFS (`forest_step_inv`, `forest_loop_correct`); the
+  int32 Montgomery reduction is source-proved too (`q·qinv ≡ 1 mod 2³²`). The only residual is the flat-array
+  index arithmetic + finite termination count (pure data-layout, byte-validated against CIRCL + go-qrllib).
 
 See the **[Verification Dossier](reference/31-ml-adsa-verification-dossier.md)** for the full
 specification ↔ code ↔ proof ↔ test traceability matrix, and an honest statement of every assumption and
@@ -72,6 +79,16 @@ boundary.
 - **[Publication & NIST roadmap](reference/32-publication-and-nist-submission-roadmap.md)** — the path to
   standardization (publish first; independent cryptanalysis is the decisive gate).
 - **[Benchmarks](reference/33-ml-adsa-benchmarks.md)** — measured sizes and timings.
+
+### For reviewers / cryptanalysts
+
+- **[Cryptanalysis review packet](reference/36-cryptanalysis-review-packet.md)** — what is claimed, what is
+  proven and how, what is **not** proven, the priority attack surfaces, and what would falsify the scheme.
+- **[Norm-budget & secure-cohort study](reference/37-norm-budget-study.md)** — the honest secure-`N`:
+  provable (Hoeffding) and measured (Monte-Carlo) bounds on the cohort size at which the summed response
+  stays inside the unmodified FIPS-204 verifier's norm ceiling.
+- **[Cross-consistency audit](reference/35-cross-consistency-audit.md)** — the single reproducible source of
+  truth for all counts (`formal/count-artifacts.sh`) and a repo-wide text↔code↔proof reconciliation.
 
 ---
 

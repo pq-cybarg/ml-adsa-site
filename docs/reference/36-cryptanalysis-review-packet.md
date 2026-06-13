@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 199 lemmas = 167 EasyCrypt + 32 Coq, 44/44 genuineness, 6 Gobra;
+**Machine-checked (33 prover artifacts, 200 lemmas = 168 EasyCrypt + 32 Coq, 45/45 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -208,8 +208,8 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
-cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 199 lemmas (167 EC + 32 Coq), 44/44, 6 Gobra
+cd formal && zsh check-all.sh          # → ALL GREEN (23 classical + 5 quantum + 5 Coq)
+zsh count-artifacts.sh                  # → 33 artifacts, 200 lemmas (168 EC + 32 Coq), 45/45, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

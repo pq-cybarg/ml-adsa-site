@@ -96,7 +96,7 @@ setup. The aggregate key `pk*` is itself a bona-fide ML-DSA key (a sum of MLWE s
 
 ## 4. What is machine-checked vs. what needs human review
 
-**Machine-checked (32 prover artifacts, 180 lemmas = 148 EasyCrypt + 32 Coq, 40/40 genuineness, 6 Gobra;
+**Machine-checked (32 prover artifacts, 189 lemmas = 157 EasyCrypt + 32 Coq, 41/41 genuineness, 6 Gobra;
 `formal/count-artifacts.sh`).** The reductions in §3, the NTT ring-isomorphism and the
 masking/rounding/Montgomery integer kernels, and 6 Go-code structural theorems (Gobra). Every proof is
 admit-free and accompanied by a **genuineness check** (weaken its named primitive → the proof must break).
@@ -122,10 +122,14 @@ admit-free and accompanied by a **genuineness check** (weaken its named primitiv
    recursion (`forest_step` = one `length`-level; `forest_step_inv` = one level preserves the transform;
    `forest_loop_correct` = once all blocks are size-1 leaves the flat array is `ntt_tree t a`; i.e. BFS = DFS),
    and **(b)** FIPS-204's bit-reversed `ζ=1753` schedule satisfies `wf` (`negtree_wf`; `negtree_computes_eval`
-   gives the per-root evaluations for the real schedule). The sole residual is the flat-array index arithmetic
-   realizing the block segmentation + the finite 8-level termination count — pure data-layout/finite-check,
-   byte-validated against CIRCL + go-qrllib + pinned KATs. (NB: the NTT is implementation-conformance, **not**
-   a security assumption — no reduction invokes it.)
+   gives the per-root evaluations for the real schedule). **Termination is proved** (`tdepth_negtree` +
+   `forest_iter_leaves`), so `fips_ntt_loop` is *unconditional*: `size l` (= 8) levels on the FIPS-204 schedule
+   yield the evaluation vector. The sole residual is the **model↔code conformance** step (same as all of
+   surface B): that the Go source's literal mutable `[256]int64` array with in-place `a[j]`/`a[j+len]` writes
+   refines this proved functional model (which splits list blocks via `take`/`drop`; `flat_one_level` shows one
+   level's array output is exactly `lo+s·hi ‖ lo−s·hi`). No algorithmic content is left — only the
+   array-representation refinement, established by the byte-exact KATs against CIRCL + go-qrllib. (NB: the NTT
+   is implementation-conformance, **not** a security assumption — no reduction invokes it.)
 
 ---
 
@@ -202,7 +206,7 @@ inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 ```sh
 # proofs (29 EasyCrypt/Coq artifacts + tallies)
 cd formal && zsh check-all.sh          # → ALL GREEN (22 classical + 5 quantum + 5 Coq)
-zsh count-artifacts.sh                  # → 32 artifacts, 180 lemmas (148 EC + 32 Coq), 40/40, 6 Gobra
+zsh count-artifacts.sh                  # → 32 artifacts, 189 lemmas (157 EC + 32 Coq), 41/41, 6 Gobra
 zsh genuineness.sh                      # → ALL 35 GENUINENESS CHECKS PASS (weaken a primitive ⇒ proof breaks)
 cd gobra && zsh run.sh                  # → 6 Gobra theorems, "Gobra found 0 errors"
 # implementation conformance (byte-exact vs two independent FIPS-204 verifiers)

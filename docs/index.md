@@ -35,8 +35,8 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 | | |
 |---|---|
 | **Prover artifacts** | **32** — 22 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
-| **Machine-checked lemmas** | **180** (148 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
-| **Genuineness** | **40/40** — each proof's named primitive is weakened and the proof confirmed to break |
+| **Machine-checked lemmas** | **189** (157 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
+| **Genuineness** | **41/41** — each proof's named primitive is weakened and the proof confirmed to break |
 | **Implementation** | reference impl byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors |
 
 Highlights of the formal development:
@@ -56,9 +56,11 @@ Highlights of the formal development:
   (`ct_correct`), the **flat-array** butterfly layout (`polyL_cat`, `polyL_bfly`), the factor-tree transform
   computes the per-root evaluation vector (`ntt_tree_correct`), **FIPS-204's own bit-reversed `ζ=1753`
   schedule satisfies the well-formedness predicate** (`negtree_wf`), and the **iterative, level-by-level loop
-  the code actually uses equals the recursion** — BFS = DFS (`forest_step_inv`, `forest_loop_correct`); the
-  int32 Montgomery reduction is source-proved too (`q·qinv ≡ 1 mod 2³²`). The only residual is the flat-array
-  index arithmetic + finite termination count (pure data-layout, byte-validated against CIRCL + go-qrllib).
+  the code actually uses equals the recursion** — BFS = DFS (`forest_step_inv`, `forest_loop_correct`), with
+  **termination proved** (`tdepth_negtree` + `forest_iter_leaves`, so the end-to-end `fips_ntt_loop` is
+  unconditional); the int32 Montgomery reduction is source-proved too (`q·qinv ≡ 1 mod 2³²`). The only residual
+  is the model↔code refinement (the Go mutable-array `a[j]`/`a[j+len]` writes vs the proved list-block model) —
+  the same conformance step as the rest of the implementation, byte-validated against CIRCL + go-qrllib.
 
 See the **[Verification Dossier](reference/31-ml-adsa-verification-dossier.md)** for the full
 specification ↔ code ↔ proof ↔ test traceability matrix, and an honest statement of every assumption and

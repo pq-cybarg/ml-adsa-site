@@ -227,8 +227,10 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
    `Theorem`/`Corollary`s but live inside `Section … End` blocks over abstract typed interfaces (injective
    hash, registry predicate, abstract HighBits); a top-level `grep "^Theorem"` will not find them. This is
    the intended boundary (structure proved over abstract primitives) and is flagged for auditors.
-5. **Parameter sets** — Category 5 only (ML-ADSA-87); 44/65 defined but not produced. **ACVP-JSON vectors**
-   — KATs exist; the ACVP wire format is a submission deliverable.
+5. **Parameter sets** — all three instantiated and CIRCL-cross-validated (ML-ADSA-44/65/87 at NIST
+   Categories 2/3/5; `go-mladsa` `Params44/65/87` + parameterized keygen/sign/aggregate/verify, `docs/40`).
+   Remaining is the official **ACVP-vector submission** for -44/-65 (the ACVP wire format is a submission
+   deliverable; KATs and ACVP-shaped JSON exist for -87).
 
 ---
 
@@ -236,7 +238,7 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 
 ```
 # Algorithm proofs (36 artifacts): EasyCrypt classical+QROM + Coq
-cd formal && zsh check-all.sh                 # → ALL GREEN (25 classical + 5 quantum + 5 Coq = 35)
+cd formal && zsh check-all.sh                 # → ALL GREEN (26 classical + 5 quantum + 5 Coq = 36)
 zsh count-artifacts.sh                         # → 36 artifacts, 244 lemmas (212 EC + 32 Coq), 50/50, 6 Gobra
 zsh genuineness.sh                            # → 50/50 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)

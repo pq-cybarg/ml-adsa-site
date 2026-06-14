@@ -238,3 +238,22 @@ cd qrl-integration/ml-adsa/qrysm && go test ./mladsa/ -run 'KAT' -count=1
 go test ./mladsa/ -run='^$' -bench=. -benchmem
 cd ../../../../go-mladsa && go test ./...     # canonical reference, also optimized, also byte-identical
 ```
+
+### AVX2 NTT — correctness gate and (native-x86) perf measurement
+
+```
+# Correctness: AVX2 NTT/INTT byte-identical to generic, validated under docker linux/amd64 (any host).
+cd go-mladsa && ./validate-avx2-docker.sh
+#   → TestNTTAVX2 (2000 vectors, fwd+inv == generic + roundtrip), TestKernelDifferential, TestMont*, …
+
+# Performance: the AVX2 speedup — RUN ON A NATIVE x86-64 HOST (QEMU/TCG timings are meaningless).
+cd go-mladsa && ./bench-avx2.sh
+#   (1) direct A/B in one process: BenchmarkNTT_Generic vs BenchmarkNTT_AVX2 (+ INTT, verify-transforms)
+#   (2) dispatcher A/B: default (AVX2) vs `-tags mladsa_noasm` (generic), with benchstat if installed
+# On arm64 / non-x86 it explains why and exits; `./bench-avx2.sh --docker` is a functional smoke only.
+```
+
+The benchmarks themselves are `bench_test.go` (arch-neutral, through `activeKernel`) and
+`bench_amd64_test.go` (direct generic-vs-AVX2 A/B). So when an x86-64 machine is available, the throughput
+number is a single `./bench-avx2.sh` away — no other setup. This is the one remaining (perf-only) item for
+the AVX2 kernel; correctness is already gated above and end-to-end CIRCL-validated.

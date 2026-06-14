@@ -90,9 +90,9 @@ Signed: __________________________  Date: ____________   (legal name & entity on
 - [x] Reference implementation — `go-mladsa/`
 - [x] Machine-checked proofs (differentiator) — `formal/`
 - [x] KAT vectors — `docs/25`; ACVP-format JSON — `vectors/` (`docs/32 #5`)
-- [ ] Optimized + constant-time implementation — partial; AVX2 needs x86 CI (`docs/32 #6`, `docs/34 §3`)
+- [x] Optimized + constant-time implementation — branchless CT reductions + allocation fusion + full AVX2 NTT/INTT (byte-identical, validated under docker emulation, enabled on AVX2 CPUs); native-x86 perf measurement pending via `bench-avx2.sh` (`docs/32 #6`, `docs/34 §3`)
 - [ ] Side-channel analysis — source-level done; automated dudect + microarch eval pending (`docs/32 #7`, `docs/34 §2`)
-- [ ] Multiple parameter sets — -87 done; -44/-65 `[VERIFY status]` (`docs/32 #8`)
+- [x] Multiple parameter sets — all three (-44/-65/-87, Cat 2/3/5) instantiated & CIRCL-cross-validated; official ACVP-vector submission for -44/-65 remains (`docs/32 #8`, `docs/40`)
 - [ ] **IP statement (signed)** — template §1; sign privately
 - [ ] **Cover sheet / PoC** — §2
 - [ ] Independent third-party cryptanalysis — `docs/39` solicitation packet (`docs/32 #11`, the decisive gate)

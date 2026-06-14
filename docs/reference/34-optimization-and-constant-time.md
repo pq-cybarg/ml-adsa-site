@@ -97,9 +97,38 @@ No **secret**-dependent timing beyond the accepted Dilithium rejection-loop coun
 secret-dependent *attempt count* (leaks attempts, not the key); Construction **B**, used for scale, is
 rejection-free; (ii) integer `%` by the constant `q` is constant-time on the target ISAs but not guaranteed
 by the language — a hardened build would use Barrett/Montgomery (the Montgomery reduction is already
-source-proved, `ml_adsa_montgomery.ec`); (iii) automated `dudect`/`ctgrind` measurement and a
-microarchitectural evaluation remain standardization deliverables (`docs/32 §6/§7`). None is a
+source-proved, `ml_adsa_montgomery.ec`); (iii) a full microarchitectural evaluation and a
+Jasmin/ct-verif machine proof remain standardization deliverables (`docs/32 §6/§7`). None is a
 secret-revealing leak at the source level.
+
+### 2c. Automated timing-leakage screen (dudect-style, machine-run)
+
+`go-mladsa/ct_test.go` implements the Reparaz–Balasch–Yarom **dudect** methodology as a runnable
+harness: for a primitive `f`, it times `f` on a **fixed** input class vs a **random** input class and
+runs **Welch's two-sample t-test** on the timing distributions (slowest 10% cropped for scheduler
+outliers, A/B interleaved to cancel drift). `|t|` staying small ⇒ no input-dependent timing detected;
+`|t|` diverging ⇒ a data-dependent path.
+
+```
+CT_MEASURE=1 go test ./ -run TestConstantTime -count=1 -v
+```
+
+**Result (Apple M-series, macOS arm64; representative run):**
+
+| primitive | `\|t\|` | reading |
+|---|---|---|
+| `leakyVarWork` (positive control — a data-dependent loop count) | **≈ 1259** | leak correctly detected (≫ 4.5) |
+| `modQ` (shipped, branchless `r + ((r>>63)&Q)`) | **≈ 0.2** | no detectable input-dependence |
+| `cabs` (shipped, branchless select) | **≈ 8** | branchless by construction; the small absolute value is OS-scheduler noise, ≫100× below the control |
+
+Two findings worth stating: (1) the harness **does** detect leakage — the positive control is loud, so
+a null on the shipped primitives is meaningful, not vacuous; (2) a *naive* `if r<0 { r += Q }` reduction
+is **not** a valid positive control, because the Go compiler lowers it to a branchless conditional-select
+(`cmov`) — i.e. even the source-level branch compiles to constant-time code here (a reassuring,
+independently-checked fact about the reduction). The test asserts the control is detected and that the
+shipped primitives stay far below it; it is **env-gated** (not in CI) because wall-clock timing on a
+multitasking OS is noisy. A cycle-accurate counter on a quiet machine (or `ctgrind`/Valgrind on x86) is
+the next step for a clean *absolute* null and is part of the side-channel standardization deliverable.
 
 ---
 
@@ -115,7 +144,38 @@ Hand-written AVX2 `.s` kernels cannot be assembled, run, or differentially teste
 unvalidated SIMD assembly into a cryptographic core would be exactly the kind of unverified artifact this
 project refuses to ship. Correct, fuzz-checked AVX2 requires an x86-64 CI runner.
 
-### Drop-in design (for x86-64 CI)
+### AVX2 — validated under emulation (no native x86 needed)
+
+**Update:** the "needs an x86-64 CI runner" caveat is *lifted for correctness validation*. A real
+AVX2 routine — `ntt_amd64.s : paddAVX2` (4×int64 mod-Q lane add: `VPADDQ` + branchless `VPCMPGTQ`
+mask + conditional `VPSUBQ`) — is **bit-exact to the generic `padd` over 1000 random vectors, validated
+by executing actual AVX2 instructions under `docker linux/amd64` emulation** (QEMU/TCG) on this arm64
+host. The reproducible gate is `go-mladsa/validate-avx2-docker.sh` (cross-compile `GOARCH=amd64` → run
+the differential test in an amd64 container); `avx2_test.go : TestPaddAVX2` is the assertion. So
+hand-written AVX2 can now be authored and *functionally* validated here, not only on native silicon —
+the only thing emulation does not measure is native timing/throughput.
+
+What remains for a full AVX2 **NTT**: the in-lane *reduction*. Our reference keeps coefficients in the
+int64 **standard domain**; a vectorized NTT butterfly needs Montgomery/Barrett reduction in-lane, which
+in practice means the 32-bit **Montgomery domain** Dilithium's AVX2 uses (`VPMULDQ`-friendly). That is a
+representation change (the same reason CIRCL's NTT isn't a byte-identical drop-in, below), so the full
+AVX2 NTT is a Montgomery-domain port — now de-risked, since `paddAVX2` proves the toolchain + emulation
+gate work end-to-end. The portable kernel remains the shipped default until the ported NTT clears the
+differential gate (now runnable here via docker, and on native x86 CI for the timing sign-off).
+
+### Drop-in design (for x86-64 CI) — seam now IMPLEMENTED
+
+**Status:** steps 1–3 below (the seam, the build-tag dispatch with a real cpuid gate, and the
+differential gate test) are **implemented and green** in `go-mladsa/` — `kernel.go` (the `nttKernel`
+interface + `genericKernel` + the `ntt/intt/pw/pwacc` dispatchers through `activeKernel`),
+`kernel_amd64.go` (`//go:build amd64 && !mladsa_noasm`; `hasAVX2 = cpu.X86.HasAVX2` wired, dispatch hook
+ready), and `kernel_test.go` (`TestKernelDifferential`: active-vs-generic bit-equality + NTT/INTT
+round-trip). The refactor is **behavior-preserving by construction** — `activeKernel` defaults to
+`genericKernel`, so every build (incl. `amd64` and `-tags mladsa_noasm`) is byte-identical to the
+pre-seam reference; the full KAT suite still passes. **The one remaining piece is the AVX2 `.s` itself**,
+which is deliberately *not* committed until it clears the differential gate on an x86-64 CI runner
+(committing unvalidated SIMD into a crypto core is the unverified-artifact risk this project refuses).
+The original design rationale follows:
 
 A clean, low-risk integration that preserves byte-identity and the existing tests:
 

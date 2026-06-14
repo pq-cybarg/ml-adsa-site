@@ -258,7 +258,7 @@ Cryptographers distinguish three strengths of evidence. We are explicit about wh
 - **Measured** — we ran real code and an *independent* verifier accepted the output.
 - **Assumed** — a standard, named hardness assumption (everyone in the field relies on these).
 
-For Construction F: **35 machine-checked prover artifacts** (all passing — 234 lemmas across EasyCrypt,
+For Construction F: **36 machine-checked prover artifacts** (all passing — 244 lemmas across EasyCrypt,
 EasyPQC, and Rocq, plus 6 Gobra code-level theorems) **+** independent-verifier (CIRCL) measurements
 **+** a small, standard assumption set. Concretely, we machine-checked:
 

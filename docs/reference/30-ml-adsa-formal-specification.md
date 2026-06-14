@@ -7,8 +7,8 @@ verification dossier (`docs/31`) and the publication / NIST-submission roadmap (
 is written in the structural style of NIST **FIPS-204** (ML-DSA) so that every object, algorithm, and
 security claim maps onto the format a NIST PQC / additional-signatures / MPTC submission expects.
 
-> Status note (honest): the scheme's security is established by 234 machine-checked lemmas (202 EasyCrypt
-> + 32 Coq) across 35 prover artifacts, plus 6 Gobra code-level theorems (tallies reproducible via
+> Status note (honest): the scheme's security is established by 244 machine-checked lemmas (212 EasyCrypt
+> + 32 Coq) across 36 prover artifacts, plus 6 Gobra code-level theorems (tallies reproducible via
 > `formal/count-artifacts.sh`; see the cross-consistency audit `docs/35`), reducing to the same assumptions
 > as ML-DSA, plus a CIRCL/go-qrllib-anchored
 > reference implementation, KATs, and live demonstrations. It has **not** yet received independent
@@ -86,7 +86,13 @@ ML-ADSA adds no new lattice parameters; it reuses ML-DSA-87 verbatim (hence Cate
 | domain tags | `"F.refresh","F.nonce","F.mt","F.kt","F.pop","F.onetime",…` | domain separation strings |
 
 This document specifies **ML-ADSA-87** (Category 5). ML-ADSA-44 (Cat 2) and ML-ADSA-65 (Cat 3) are
-defined identically over the corresponding ML-DSA parameter sets and are future deliverables (`docs/32`).
+defined identically over the corresponding ML-DSA parameter sets. All three sets are now realized end-to-end in
+`go-mladsa/` — `params.go` (exact FIPS-204 values; derived sizes `(1312,2420)`/`(1952,3309)`/
+`(2592,4627)`), `verify_param.go` (parameterized verifier), `sign_param.go` (KeyGenP+SignP), and
+`aggregate_param.go` (the multi-signer aggregate). All are cross-validated against CIRCL's independent
+mldsa44/65/87: our base signatures **and** our multi-signer aggregate `(pk*,sig*)` are accepted by
+CIRCL's verifier at every set, tamper rejected (`param_test.go`, `sign_param_test.go`,
+`aggregate_param_test.go`). See `docs/40`.
 
 ---
 

@@ -100,3 +100,7 @@ nav:
     - Optimization & constant-time: reference/34-optimization-and-constant-time.md
     - Cross-consistency audit (+ Raccoon/Chipmunk comparison): reference/35-cross-consistency-audit.md
     - Cryptanalysis review packet: reference/36-cryptanalysis-review-packet.md
+    - Norm-budget & secure-cohort study: reference/37-norm-budget-study.md
+    - Submission process pack (IP / cover sheet): reference/38-submission-process-pack.md
+    - Cryptanalysis solicitation: reference/39-cryptanalysis-solicitation.md
+    - Parameter sets (Cat 2/3/5): reference/40-parameter-sets.md

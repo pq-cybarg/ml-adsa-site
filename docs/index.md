@@ -8,6 +8,8 @@ FIPS-204 verifier accepts** against an aggregate public key. No trusted setup, n
 SNARK/STARK/ZK proof system, no TEE, and no trusted or intermediary aggregator — every value the combiner
 uses is public, so any party reconstructs the identical aggregate.
 
+[Read the paper](reference/paper.md){ .md-button .md-button--primary } [Download the paper (PDF)](reference/ml-adsa.pdf){ .md-button }
+
 ---
 
 ## The idea in one line
@@ -34,9 +36,9 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 
 | | |
 |---|---|
-| **Prover artifacts** | **35** — 25 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
-| **Machine-checked lemmas** | **234** (202 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
-| **Genuineness** | **49/49** — each proof's named primitive is weakened and the proof confirmed to break |
+| **Prover artifacts** | **36** — 26 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
+| **Machine-checked lemmas** | **244** (212 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
+| **Genuineness** | **50/50** — each proof's named primitive is weakened and the proof confirmed to break |
 | **Implementation** | reference impl byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors |
 
 Highlights of the formal development:
@@ -72,7 +74,7 @@ boundary.
 ## Start here
 
 - **[Research paper](reference/paper.md)** — the full write-up (the BLS additive-dual framing, security,
-  decentralized combine, performance).
+  decentralized combine, performance). Readable in-page, or **[download the PDF](reference/ml-adsa.pdf)**.
 - **[Plain-language whitepaper](reference/19-ml-adsa-F-plain-language-whitepaper.md)** — the same ideas, no
   cryptography background assumed.
 - **[Formal specification](reference/30-ml-adsa-formal-specification.md)** — FIPS-204-structured

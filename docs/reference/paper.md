@@ -1,3 +1,6 @@
+!!! note "Research paper"
+    [**Download the full paper (PDF)**](ml-adsa.pdf){ .md-button .md-button--primary } &nbsp; The complete paper is reproduced, readable, below.
+
 # ML-ADSA: A Trapdoor-Free Post-Quantum Aggregate Signature from Module-Lattice Summation over ML-DSA
 
 *Research paper draft (v1.0). Companion artifacts: formal specification (`docs/30`), end-to-end
@@ -34,8 +37,8 @@ rogue-key resistance. We further prove that producing *any* member of the equiva
 signatures for a fixed `(pk*, m)` is as hard as a single ML-DSA forgery (no advantage from
 signature multiplicity), in ROM and QROM.
 
-The scheme is accompanied by **234 machine-checked lemmas** (202 EasyCrypt + 32 Coq) across **35 prover
-artifacts** (25 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
+The scheme is accompanied by **244 machine-checked lemmas** (212 EasyCrypt + 32 Coq) across **36 prover
+artifacts** (26 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
 (tallies reproducible via `formal/count-artifacts.sh`), a reference implementation cross-validated against CIRCL and theQRL/go-qrllib,
 known-answer tests, and live multi-process demonstrations of decentralized aggregation and order/grouping
 independence. We discuss limitations — chiefly the need for independent cryptanalysis, additional
@@ -115,7 +118,7 @@ lattice multi-signatures, letting us prove concurrent security with **no ROS/AGM
    ROM and QROM (§6.5).
 5. **Accountability layers** — an epoch Merkle key-tree (non-equivocation), registry + proof-of-possession
    (rogue-key resistance), and a ZKP-free decoy mechanism for signer-set privacy (§4, §8).
-6. **A reproducible assurance package**: 234 machine-checked lemmas across 35 prover artifacts (+6 Gobra
+6. **A reproducible assurance package**: 244 machine-checked lemmas across 36 prover artifacts (+6 Gobra
    code-level theorems), a CIRCL/go-qrllib-anchored reference implementation, KATs, and live decentralized
    demonstrations (§7, §9).
 
@@ -412,7 +415,7 @@ KATs) are in `vectors/`. The reference is portable and not yet constant-time/AVX
 The reference implementation (`go-mladsa/`) is cross-validated against **CIRCL** and **theQRL/go-qrllib**:
 every aggregate is a byte-exact ML-DSA-87 `(pk 2592, sig 4627)` triple their unmodified verifiers accept.
 Assurance has three surfaces (full traceability in `docs/31`): (i) **algorithm-level machine-checked
-proofs** — 234 lemmas (202 EasyCrypt + 32 Coq) across 35 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
+proofs** — 244 lemmas (212 EasyCrypt + 32 Coq) across 36 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
 **implementation conformance** — KATs and CIRCL/go-qrllib cross-checks; (iii) **code-level structural
 proofs** — Gobra theorems for the Merkle/one-time/framing/decision-linearity invariants. We are explicit
 about boundaries: the machine-checked proofs are about the algorithm/model; Go conformance is

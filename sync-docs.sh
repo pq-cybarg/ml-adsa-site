@@ -26,6 +26,17 @@ done
 # the research paper → reference/paper.md
 cp -f "$SRC/paper/ml-adsa.md" "$REF/paper.md"; n=$((n+1))
 
+# the research paper is BOTH readable (this page) and downloadable (PDF). Refresh the PDF from the
+# source build and prepend a download banner to the rendered page (re-applied on every sync).
+if [[ -x "$SRC/paper/eprint/build.sh" ]]; then
+  TZ=UTC0 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-1700000000}" "$SRC/paper/eprint/build.sh" >/dev/null 2>&1 || true
+fi
+if [[ -f "$SRC/paper/eprint/ml-adsa.pdf" ]]; then
+  cp -f "$SRC/paper/eprint/ml-adsa.pdf" "$REF/ml-adsa.pdf"
+fi
+banner=$'!!! note "Research paper"\n    [**Download the full paper (PDF)**](ml-adsa.pdf){ .md-button .md-button--primary } &nbsp; The complete paper is reproduced, readable, below.\n\n'
+printf '%s' "$banner" | cat - "$REF/paper.md" > "$REF/paper.md.tmp" && mv "$REF/paper.md.tmp" "$REF/paper.md"
+
 echo "synced $n files into $REF"
 echo "reminder: counts on the landing page (docs/index.md) are maintained by hand —"
 echo "verify them against: (cd $SRC/formal && zsh count-artifacts.sh)"

@@ -2,8 +2,9 @@
 
 Companion to the benchmarks (`docs/33`) and spec §9.4. Covers (1) the optimization pass already applied
 (real, measured, byte-identical), (2) the constant-time posture and what is/isn't hardened, and (3) the
-AVX2 NTT path — with an honest statement of why the assembly kernels are *designed here but not shipped
-untested*.
+AVX2 NTT path — a full Montgomery-domain AVX2 NTT/INTT kernel, byte-identical to the generic kernel,
+*implemented and validated under `docker linux/amd64` emulation and enabled by default on AVX2 CPUs*; the
+only open item is a native-x86 timing measurement.
 
 ---
 
@@ -132,7 +133,7 @@ the next step for a clean *absolute* null and is part of the side-channel standa
 
 ---
 
-## 3. AVX2 NTT — design, and why it is not shipped here
+## 3. AVX2 NTT — implemented, validated under emulation, shipped on AVX2 CPUs
 
 The single largest remaining speedup for ML-DSA-class arithmetic is a vectorized NTT. The standard result
 (CRYSTALS-Dilithium AVX2 reference, and Cloudflare CIRCL's optimized ML-DSA) is hand-tuned x86-64 AVX2
@@ -155,27 +156,51 @@ the differential test in an amd64 container); `avx2_test.go : TestPaddAVX2` is t
 hand-written AVX2 can now be authored and *functionally* validated here, not only on native silicon —
 the only thing emulation does not measure is native timing/throughput.
 
-What remains for a full AVX2 **NTT**: the in-lane *reduction*. Our reference keeps coefficients in the
-int64 **standard domain**; a vectorized NTT butterfly needs Montgomery/Barrett reduction in-lane, which
-in practice means the 32-bit **Montgomery domain** Dilithium's AVX2 uses (`VPMULDQ`-friendly). That is a
-representation change (the same reason CIRCL's NTT isn't a byte-identical drop-in, below), so the full
-AVX2 NTT is a Montgomery-domain port — now de-risked, since `paddAVX2` proves the toolchain + emulation
-gate work end-to-end. The portable kernel remains the shipped default until the ported NTT clears the
-differential gate (now runnable here via docker, and on native x86 CI for the timing sign-off).
+**The full AVX2 NTT is now implemented and validated.** The key obstacle was the in-lane *reduction*:
+our reference keeps coefficients in the int64 **standard domain**, but a vectorized butterfly needs a
+divide-free reduction, and AVX2 has no 64-bit integer divide. We solve it with an in-lane **Montgomery
+reduction** (`ntt_amd64.s`), exactly the technique Dilithium's AVX2 uses, but kept **byte-identical to the
+standard-domain generic kernel** rather than leaving coefficients in a wider lazy form:
 
-### Drop-in design (for x86-64 CI) — seam now IMPLEMENTED
+- The per-butterfly product `p = z·a` (both operands `< Q < 2²³`, so `p < 2⁴⁶`) is reduced by
+  `montgomery_reduce(p) = (p − t·Q)/2³²` where `t = (int32)p·QINV mod 2³²`. The load-bearing congruence
+  `Q·QINV ≡ 1 (mod 2³²)` (QINV = 58728449) is **machine-checked** in `formal/ml_adsa_montgomery.ec`; the
+  scalar reference of the exact lane computation is `montgomery.go : montReduce`, with its own arch-neutral
+  proof-tests (`montgomery_test.go`, runnable on arm64).
+- AVX2 lacks a 64-bit arithmetic shift (`VPSRAQ` is AVX-512), so the `/2³²` of the (always-`2³²`-divisible)
+  intermediate is done with a logical `VPSRLQ $32` plus a branchless `2³²−Q` correction for the negative
+  case — yielding a canonical `[0,Q)` residue, not a lazy one.
+- Pre-scaling each zeta into Montgomery form (`zmont = z·R mod Q`, tables `zetasMont`/`zetasMontNeg` in
+  `montgomery.go`) makes `montgomery_reduce(zmont·a) ≡ z·a (mod Q)`, so the transform output **equals the
+  generic kernel's representatives bit-for-bit**. Forward (Cooley–Tukey, `ctButterflyAVX2`) and inverse
+  (Gentleman–Sande, `gsButterflyAVX2` + the `inv256` scale `montMulConstAVX2`) butterflies process four
+  `int64` coefficients per `Y` register; the two smallest levels (group width 1 and 2, narrower than a
+  4-lane vector) fall back to the generic scalar butterfly.
 
-**Status:** steps 1–3 below (the seam, the build-tag dispatch with a real cpuid gate, and the
-differential gate test) are **implemented and green** in `go-mladsa/` — `kernel.go` (the `nttKernel`
-interface + `genericKernel` + the `ntt/intt/pw/pwacc` dispatchers through `activeKernel`),
-`kernel_amd64.go` (`//go:build amd64 && !mladsa_noasm`; `hasAVX2 = cpu.X86.HasAVX2` wired, dispatch hook
-ready), and `kernel_test.go` (`TestKernelDifferential`: active-vs-generic bit-equality + NTT/INTT
-round-trip). The refactor is **behavior-preserving by construction** — `activeKernel` defaults to
-`genericKernel`, so every build (incl. `amd64` and `-tags mladsa_noasm`) is byte-identical to the
-pre-seam reference; the full KAT suite still passes. **The one remaining piece is the AVX2 `.s` itself**,
-which is deliberately *not* committed until it clears the differential gate on an x86-64 CI runner
-(committing unvalidated SIMD into a crypto core is the unverified-artifact risk this project refuses).
-The original design rationale follows:
+**Validation (reproducible here, no native x86):** `validate-avx2-docker.sh` cross-compiles `GOARCH=amd64`
+and runs the differential gate under `docker linux/amd64` (AVX2 via QEMU/TCG). `avx2_test.go : TestNTTAVX2`
+asserts the AVX2 forward/inverse NTT are **bit-exact to `nttGeneric`/`inttGeneric` over 2000 random
+vectors** and that `INTT∘NTT = id`; `TestKernelDifferential` confirms the *dispatched* `activeKernel`
+(which under the emulated cpuid resolves to `avx2Kernel`) matches generic for NTT/INTT/PW/PWAcc; and the
+end-to-end CIRCL cross-checks (`TestCoreVsCIRCL`, `TestF_AggregateF_CIRCL`, `TestParamVerifyVsCIRCL` over
+all three parameter sets) **pass with the AVX2 kernel active**, i.e. every aggregate is still a byte-exact
+FIPS-204 signature CIRCL accepts. The **only** thing emulation cannot measure is native
+timing/throughput — that perf sign-off is the lone remaining step, and is deliberately left for an x86-64
+runner since QEMU/TCG cycle counts are meaningless.
+
+### Drop-in design — seam + AVX2 kernel now IMPLEMENTED and ENABLED
+
+**Status:** the full design (steps 1–3 below) is **implemented and green** in `go-mladsa/`:
+`kernel.go` (the `nttKernel` interface + `genericKernel` + the `ntt/intt/pw/pwacc` dispatchers through
+`activeKernel`), `kernel_amd64.go` (`//go:build amd64 && !mladsa_noasm`; `hasAVX2 = cpu.X86.HasAVX2`, and
+the dispatch now **active**: `if hasAVX2 { activeKernel = avx2Kernel{} }`), `ntt_amd64.s` + `ntt_amd64.go`
+(the Montgomery-domain `ctButterflyAVX2`/`gsButterflyAVX2`/`montMulConstAVX2` and the level drivers
+`nttAVX2`/`inttAVX2`), `montgomery.go` (constants + zeta tables), and the gates `kernel_test.go` /
+`avx2_test.go` / `montgomery_test.go`. The path is **safe to ship on by default** for AVX2-capable CPUs
+precisely because it is byte-identical: enabling it can change only *speed*, never *output* — and that
+byte-identity is what the differential gate proves. Every build still has an escape hatch: `-tags
+mladsa_noasm` (or any non-amd64 arch) keeps the validated generic kernel everywhere, and is byte-identical
+to the pre-seam reference. The original design rationale follows:
 
 A clean, low-risk integration that preserves byte-identity and the existing tests:
 
@@ -198,9 +223,10 @@ A clean, low-risk integration that preserves byte-identity and the existing test
    So the CIRCL route is deferred — it would mean vendoring CIRCL internals + a domain-conversion shim,
    which is rearchitecting, not integration.
 
-Until an x86-64 CI runner is available, the portable kernel (now allocation-optimized and branchless) is
-the shipped path. The cleanest future option is hand-written AVX2 under the §3 dispatch + differential
-KAT gate on x86 CI (option 1–3), not the CIRCL-internal route.
+The hand-written AVX2 route (options 1–3) is the one we took, and it is now the shipped fast path on
+AVX2 CPUs (generic elsewhere) — *not* the CIRCL-internal route, which would have meant vendoring CIRCL
+internals plus a domain-conversion shim. Correctness is validated under emulation; the only open item is a
+native-x86 timing/throughput measurement (perf, not correctness).
 
 ---
 

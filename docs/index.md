@@ -3,7 +3,8 @@
 **A trapdoor-free, post-quantum, BLS-like aggregate signature over ML-DSA-87 (FIPS-204) — machine-checked.**
 
 ML-ADSA (Module-Lattice Aggregate Digital Signature Algorithm) lets a committee of signers, each holding
-an ordinary **ML-DSA-87** key, jointly produce **one constant-size signature** that the **unmodified
+an ordinary **ML-DSA** key — at any of the three FIPS-204 parameter sets (**ML-ADSA-44/65/87**, NIST
+Categories **2/3/5**) — jointly produce **one constant-size signature** that the **unmodified
 FIPS-204 verifier accepts** against an aggregate public key. No trusted setup, no trapdoors, no
 SNARK/STARK/ZK proof system, no TEE, and no trusted or intermediary aggregator — every value the combiner
 uses is public, so any party reconstructs the identical aggregate.
@@ -39,7 +40,7 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 | **Prover artifacts** | **36** — 26 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
 | **Machine-checked lemmas** | **244** (212 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
 | **Genuineness** | **50/50** — each proof's named primitive is weakened and the proof confirmed to break |
-| **Implementation** | reference impl byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors |
+| **Implementation** | reference impl at **all three parameter sets** (ML-ADSA-44/65/87, NIST Cat 2/3/5) byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors; byte-identical **AVX2 NTT** kernel |
 
 Highlights of the formal development:
 

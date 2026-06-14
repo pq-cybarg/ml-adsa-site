@@ -14,11 +14,16 @@ are explicitly flagged as prerequisites for standardization.*
 ## Abstract
 
 We present **ML-ADSA** (Module-Lattice Aggregate Digital Signature Algorithm), a non-interactive,
-decentralized, trapdoor-free aggregate signature scheme over **ML-DSA-87** (FIPS-204). A committee of
-signers, each holding an ordinary ML-DSA key, jointly produces a **single constant-size** signature that
+decentralized, trapdoor-free aggregate signature scheme over **ML-DSA** (FIPS-204), instantiated at **all
+three FIPS-204 parameter sets** — ML-ADSA-44, -65, and -87, at **NIST Categories 2, 3, and 5**. A committee
+of signers, each holding an ordinary ML-DSA key, jointly produces a **single constant-size** signature that
 the **unmodified FIPS-204 verifier** accepts against an aggregate public key. ML-ADSA requires **no
 trusted setup, no trapdoors, no SNARK/STARK/zero-knowledge proof system, and no trusted or intermediary
 aggregator**; every value the combiner uses is public, so any party reconstructs the identical aggregate.
+The construction is parameter-generic — it depends only on ML-DSA's shared base ring `(q, n=256, d=13)` and
+the Fiat–Shamir linearity, not on the per-level `(k,ℓ, η, τ, γ₁, γ₂, ω)` — so a single combine procedure
+serves every level; the aggregate sizes are exactly ML-DSA's (pk/sig of 1312/2420, 1952/3309, 2592/4627
+bytes), independent of the committee size.
 
 Our central observation is structural: BLS aggregation is the **homomorphic product** of signatures in a
 pairing group, `σ* = Π σᵢ`; ML-ADSA is the **homomorphic sum** of Fiat–Shamir responses in the module
@@ -29,8 +34,10 @@ challenge binds the entire participant commitment, so finished aggregates are **
 mergeable**: aggregation is a single-shot combine over contributions rather than an incremental product.
 
 Security reduces, in both the ROM and the QROM, to the *same* assumptions as ML-DSA itself — decisional
-Module-LWE, SelfTargetMSIS, and Module-SIS — at NIST Category 5, because the aggregate key is itself a
-bona fide ML-DSA key (a sum of Module-LWE samples is a Module-LWE sample). We give a content-refresh layer
+Module-LWE, SelfTargetMSIS, and Module-SIS — at the **NIST category of whichever parameter set is used**
+(2/3/5 for -44/-65/-87), because the aggregate key is itself a bona fide ML-DSA key at that level (a sum of
+Module-LWE samples is a Module-LWE sample with the same parameters). The proofs are parameter-generic; they
+quantify over `(k,ℓ, η, τ, γ₁, γ₂, ω)` and instantiate to each level. We give a content-refresh layer
 that yields **many-time** security (advantage independent of the number of signed contents), an epoch
 Merkle key-tree for non-equivocation and accountability, and a registry/proof-of-possession layer for
 rogue-key resistance. We further prove that producing *any* member of the equivalence class of valid
@@ -39,10 +46,11 @@ signature multiplicity), in ROM and QROM.
 
 The scheme is accompanied by **244 machine-checked lemmas** (212 EasyCrypt + 32 Coq) across **36 prover
 artifacts** (26 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
-(tallies reproducible via `formal/count-artifacts.sh`), a reference implementation cross-validated against CIRCL and theQRL/go-qrllib,
-known-answer tests, and live multi-process demonstrations of decentralized aggregation and order/grouping
-independence. We discuss limitations — chiefly the need for independent cryptanalysis, additional
-parameter sets, and a fully derived tight-QROM bound for the lossy (rejection-free) construction variant.
+(tallies reproducible via `formal/count-artifacts.sh`), a reference implementation **at all three parameter sets** cross-validated against CIRCL and
+theQRL/go-qrllib, known-answer tests, a byte-identical AVX2 NTT kernel, and live multi-process
+demonstrations of decentralized aggregation and order/grouping independence. We discuss limitations —
+chiefly the need for independent cryptanalysis and a fully derived tight-QROM bound for the lossy
+(rejection-free) construction variant.
 
 ---
 
@@ -106,7 +114,8 @@ lattice multi-signatures, letting us prove concurrent security with **no ROS/AGM
 ### 1.4 Contributions
 
 1. **A trapdoor-free, setup-free, proof-system-free post-quantum aggregate signature** whose output is a
-   byte-exact ML-DSA-87 signature and whose verifier is the unmodified FIPS-204 verifier (§3, §5).
+   byte-exact ML-DSA signature — at any of the three FIPS-204 parameter sets (Categories 2/3/5) — and whose
+   verifier is the unmodified FIPS-204 verifier (§3, §5).
 2. **A tight security reduction to ML-DSA's own assumptions** (decisional MLWE + SelfTargetMSIS) in the
    ROM, and a QROM reduction (tight for the perfect-masking construction), all **machine-checked** in
    EasyCrypt; the aggregate key is a genuine ML-DSA key, so Category-5 hardness is inherited exactly (§6).
@@ -129,9 +138,11 @@ for standardization. The QROM bound for the *rejection-free* (Construction B) va
 distinct-per-query GHHM21 adaptive-reprogramming form in-prover (`ml_adsa_qrom_ghhm.ec`, §6.6) from a
 proven per-round perfect resampling and the elementary distinct-query bound — it is no longer imported as
 the loose Zhandry semi-constant-distribution axiom (which is retained only as an independent cross-check);
-the perfect-masking (Construction A) variant is tight and unconditional. Parameter sets beyond Category 5
-(ML-ADSA-44/65) and ACVP-format vectors are defined but not yet produced. None of these affect the core
-claims; all are itemized in §10 and `docs/32`.
+the perfect-masking (Construction A) variant is tight and unconditional. All three parameter sets
+(ML-ADSA-44/65/87, Categories 2/3/5) are instantiated in the reference implementation and CIRCL-cross-
+validated, and ACVP-shaped vectors are produced; the remaining gaps are external (independent
+cryptanalysis; formal ACVP registration). None of these affect the core claims; all are itemized in §10
+and `docs/32`.
 
 ---
 
@@ -193,9 +204,27 @@ We use FIPS-204 notation (§2 of `docs/30`): ring `R_q`, public matrix `A ∈ R_
 secret `(s1, s2)`, key `t = A·s1 + s2`, challenge `c = SampleInBall(c̃)` with `τ` nonzero ±1 coefficients,
 masking nonce `y` with `‖y‖_∞ < γ1`, commitment `w = A·y`, response `z = y + c·s1`, decomposition
 `Decompose/HighBits/LowBits`, `Power2Round`, hints `MakeHint/UseHint`, and `μ = H(H(pk) ‖ ctx ‖ m)`.
-ML-DSA-87 is Category 5 with `(k,ℓ)=(8,7)`, `q=8380417`, `n=256`. Assumptions: decisional **MLWE**,
-**SelfTargetMSIS** (FIPS-204's forgery assumption), **Module-SIS**; plus a secure **PRF** and a
-collision-resistant hash.
+Assumptions: decisional **MLWE**, **SelfTargetMSIS** (FIPS-204's forgery assumption), **Module-SIS**; plus
+a secure **PRF** and a collision-resistant hash.
+
+**Parameter sets.** All three FIPS-204 sets share the base ring `q = 8380417`, `n = 256`, `d = 13`, and the
+NTT root `ζ = 1753`; only the module dimensions `(k,ℓ)`, the secret/challenge distributions `(η, τ)`, the
+masking/rounding magnitudes `(γ₁, γ₂, β=τη, ω)`, and the challenge-hash length `c̃` change. Because ML-ADSA
+depends only on the shared ring and Fiat–Shamir linearity, the *same* combine and the *same* proofs serve
+all three; ML-ADSA inherits each set's NIST category and its byte-exact ML-DSA sizes:
+
+| ML-ADSA set | NIST cat. | `(k,ℓ)` | `η` | `τ` | `γ₁` | `γ₂` | `ω` | `c̃` (B) | pk (B) | sig (B) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **ML-ADSA-44** | **2** | (4,4) | 2 | 39 | 2¹⁷ | (q−1)/88 | 80 | 32 | 1312 | 2420 |
+| **ML-ADSA-65** | **3** | (6,5) | 4 | 49 | 2¹⁹ | (q−1)/32 | 55 | 48 | 1952 | 3309 |
+| **ML-ADSA-87** | **5** | (8,7) | 2 | 60 | 2¹⁹ | (q−1)/32 | 75 | 64 | 2592 | 4627 |
+
+The aggregate is a byte-exact ML-DSA signature at the chosen level, so the pk/sig columns are *also* the
+aggregate's sizes — constant in the committee size `N`. The reference implementation realizes all three
+(`go-mladsa` `Params44/65/87`, parameterized verifier/signer/aggregator), cross-validated against CIRCL's
+`mldsa44/65/87` (every aggregate accepted by their unmodified verifier; §9). Where a running example is
+helpful we use **ML-ADSA-87** (Category 5), QRL 2.0's deployment target; the statements hold at each level
+with the table's substitutions.
 
 ---
 
@@ -278,8 +307,12 @@ template, and §6.4 turns it into a security advantage.
 ## 6. Security
 
 All theorems are machine-checked; lemma names/provers are in `docs/31`. We summarize statements and the
-reduction structure. Throughout, the aggregate key `pk* = (ρ, HighBits(Σ tᵢ))` is a genuine ML-DSA-87 key:
-a sum of MLWE samples is an MLWE sample with the same parameters, so Category-5 hardness is inherited.
+reduction structure. The proofs are **parameter-generic**: they quantify over `(k,ℓ, η, τ, γ₁, γ₂, ω)` and
+instantiate to each of the three sets. Throughout, the aggregate key `pk* = (ρ, HighBits(Σ tᵢ))` is a
+genuine ML-DSA key *at the cohort's parameter set*: a sum of MLWE samples is an MLWE sample with the same
+parameters, so the **NIST category of that set (2 for -44, 3 for -65, 5 for -87) is inherited exactly**. We
+state bounds in the level-agnostic form `adv_mlwe + Adv^{SelfTargetMSIS}`; substituting the set's
+parameters gives the concrete category. The running example is ML-ADSA-87 (Category 5).
 
 ### 6.1 EUF-CMA (keystone, ROM)
 
@@ -402,18 +435,25 @@ engineering lessons.
 
 ## 8b. Performance (measured, reference implementation)
 
-On Apple M5 (reference, unoptimized Go), the per-content refresh is ~0.10 ms, single-signer aggregation
-~0.40 ms, and `N=128` aggregation ~24 ms (one-time per slot, split across the committee in deployment).
-**Verification is `O(1)` in `N`** — one ML-DSA-87 verify (~0.14 ms native go-qrllib) — against a constant
-**4627-byte** signature and **2592-byte** aggregate key, versus an `O(N)`-byte / `O(N)`-verify per-attester
-list (128× smaller at a 128-member committee). Full tables, allocations, and reproduction commands are in
-`docs/33`; ACVP-style KAT vectors generated by the reference implementation (digests matching the pinned
-KATs) are in `vectors/`. The reference is portable and not yet constant-time/AVX2-optimized (§10).
+On Apple M5 (reference Go), the per-content refresh is ~0.10 ms, single-signer aggregation ~0.40 ms, and
+`N=128` aggregation ~24 ms at ML-ADSA-87 (one-time per slot, split across the committee in deployment); the
+-44/-65 levels are proportionally cheaper (smaller `(k,ℓ)`). **Verification is `O(1)` in `N`** — one
+unmodified ML-DSA verify (~0.14 ms native go-qrllib at -87) — against the **constant** aggregate sizes of
+the chosen level (2420/3309/4627-byte signature and 1312/1952/2592-byte aggregate key for -44/-65/-87),
+versus an `O(N)`-byte / `O(N)`-verify per-attester list (e.g. 128× smaller at a 128-member committee).
+Full tables, allocations, and reproduction commands are in `docs/33`; ACVP-style KAT vectors generated by
+the reference implementation (digests matching the pinned KATs) are in `vectors/`. The cost-dominant NTT
+has a **byte-identical AVX2 kernel** (Montgomery-domain `VPMULDQ` reduction; enabled on AVX2 CPUs,
+differentially validated against the generic kernel under `docker linux/amd64`); native-x86 timing is the
+one open perf item (§10).
 
 ## 9. Implementation and assurance
 
-The reference implementation (`go-mladsa/`) is cross-validated against **CIRCL** and **theQRL/go-qrllib**:
-every aggregate is a byte-exact ML-DSA-87 `(pk 2592, sig 4627)` triple their unmodified verifiers accept.
+The reference implementation (`go-mladsa/`) is cross-validated against **CIRCL** and **theQRL/go-qrllib**
+at **all three parameter sets**: every aggregate is a byte-exact ML-DSA `(pk, sig)` pair their unmodified
+verifiers accept — `(1312, 2420)` at -44, `(1952, 3309)` at -65, `(2592, 4627)` at -87 (the parameterized
+signer/verifier/aggregator are exercised against CIRCL's `mldsa44/65/87`; the -87 path is additionally the
+legacy reference and is asserted byte-identical to it).
 Assurance has three surfaces (full traceability in `docs/31`): (i) **algorithm-level machine-checked
 proofs** — 244 lemmas (212 EasyCrypt + 32 Coq) across 36 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
 **implementation conformance** — KATs and CIRCL/go-qrllib cross-checks; (iii) **code-level structural
@@ -437,10 +477,13 @@ cross-checked byte-for-byte against two independent FIPS-204 implementations rat
    program-equivalence (real-RO signer ~ reprogramming HVZK simulator) is itself machine-checked
    (`reprog_round_equiv`), leaving only the lattice response's HVZK-simulatability (the `masking_ok` axiom
    shared with the rest of the proof) factored out. Construction A is tight and unconditional.
-3. **Parameter sets** — only Category 5 (ML-ADSA-87) is specified; ML-ADSA-44/65 are defined but not
-   produced.
-4. **ACVP vectors and constant-time/side-channel-hardened optimized implementation** — deliverables for
-   submission.
+3. **Parameter sets** — all three (ML-ADSA-44/65/87, Categories 2/3/5) are now instantiated in the
+   reference implementation and cross-validated against CIRCL's `mldsa44/65/87`; the parameter-generic
+   proofs cover each level. (Formal ACVP *registration* with NIST remains an external step.)
+4. **Optimized implementation** — the cost-dominant NTT has a byte-identical AVX2 kernel (Montgomery-domain
+   `VPMULDQ`), differentially validated under `docker linux/amd64`; the open items are a native-x86
+   timing/throughput measurement and a fully constant-time-hardened build (the NTT's data-independence is
+   already machine-backed; §2 of `docs/34`).
 5. **Single common message** — like BLS aggregate-on-common-message; distinct-message aggregation is out
    of scope (that is the regime of proof-of-aggregation / LaBRADOR).
 

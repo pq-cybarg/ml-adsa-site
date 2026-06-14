@@ -65,7 +65,7 @@ ML-ADSA (docs/25, `kat_test.go`):
 | assumptions | MLWE + SelfTargetMSIS, Fiat-Shamir-with-aborts | same + PRF + CR-hash (for refresh/provenance) — **no new hardness vs ML-DSA** |
 | (Q)ROM | cited (KLS18); not in the FIPS text | **machine-checked** QROM (EasyPQC): Construction-A tight `qrom_eufcma_uncond`; Construction-B lossy/named |
 | param justification | core-SVP in the Dilithium spec | **inherited verbatim** (no param change) ⇒ same core-SVP/Cat-5 |
-| validation | **CAVP/ACVP** (prerequisite for FIPS 140-3) | **none** (research scheme); base inherits ACVP via CIRCL/go-qrllib; code-level Gobra proofs + 29 algorithm proofs (134 lemmas) + KATs are stronger-than-typical evidence but are **not** CAVP validation |
+| validation | **CAVP/ACVP** (prerequisite for FIPS 140-3) | **none** (research scheme); base inherits ACVP via CIRCL/go-qrllib; code-level Gobra proofs + 35 algorithm proofs (234 lemmas) + KATs are stronger-than-typical evidence but are **not** CAVP validation |
 | independent review | NIST process | **required, not yet done** (stated in docs/18 §5, docs/21 §8) |
 
 ## 5. Gap summary — what a NIST-grade ML-ADSA spec would still need

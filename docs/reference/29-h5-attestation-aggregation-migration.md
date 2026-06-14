@@ -238,8 +238,8 @@ Four properties requested for the transition (all implemented + tested/proven):
   `adv_mlwe + Pr[STMSIS]`. The multiplicity of valid signatures gives the adversary **no advantage**, and
   the bits of security equal ML-DSA-87 Cat 5 (`pk*` is a bona fide ML-DSA key — sum of MLWE samples is
   MLWE — and `verify` is the unmodified FIPS-204 verifier). Lemmas `in_equiv_classE`,
-  `equiv_class_guess_eq_forge`, `equiv_class_guess_bound`; whole formal suite green (19 classical EC +
-  5 quantum + 5 Coq = 29 artifacts).
+  `equiv_class_guess_eq_forge`, `equiv_class_guess_bound`; whole formal suite green (25 classical EC +
+  5 quantum + 5 Coq = 35 artifacts).
 
 ## 4.6 Live local-net proof: aggregate-of-aggregates is order-independent (`cmd/mladsa-hieragg`)
 

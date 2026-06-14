@@ -59,8 +59,10 @@ variant to gate against.
 
 The NTT/INTT is the one piece of the secret hot path with non-trivial control flow (three nested loops),
 so its constant-time property is now **machine-checked**, not merely argued. `formal/ml_adsa_ntt_imp.ec`
-transcribes the Go inner loop as an EasyCrypt `proc` over a mutable array (`NTTimp.jl`), proved correct by
-Hoare logic (`jl_correct`). The decisive fact is **manifest in the verified program text**:
+transcribes **all three** Go loops as EasyCrypt `proc`s over a mutable array — `NTTimp.jl` (inner
+butterfly, `jl_correct`), `NTTimp.sl` (the start-loop = one full level, `sl_correct`), and `NTTimp.ntt`
+(the len-loop = the whole transform, `ntt_correct`) — each proved correct by Hoare logic with explicit
+loop invariants. The decisive fact is **manifest in the verified program text**:
 
 - every **loop bound** (`len`, `start`, `j`) and the twiddle counter `k` is a function of the **loop
   counters only**;

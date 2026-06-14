@@ -5,8 +5,8 @@ dossier ties **specification ↔ code ↔ machine-checked proofs ↔ tests** int
 "verification of the entire process" — and states, honestly, what each piece of evidence does and does not
 establish.
 
-> Reproduce everything: `formal/check-all.sh` (33 prover artifacts, ALL GREEN), `formal/genuineness.sh`
-> (45 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
+> Reproduce everything: `formal/check-all.sh` (35 prover artifacts, ALL GREEN), `formal/genuineness.sh`
+> (49 weaken-and-break checks), `formal/gobra/run.sh` (6 code-level theorems), `go test ./...` in
 > `go-mladsa/` and the qrysm fork, and the three live demos (`cmd/mladsa-devnet`, `mladsa-hieragg`,
 > `mladsa-epochnet`).
 
@@ -82,13 +82,18 @@ in-place pass equals the block butterfly `bfly z lo hi ‖ bfly (−z) lo hi`, w
 Go `zetas[k] = ζ^brv8(k)` exponent) is proved to satisfy *exactly* `negtree`'s negacyclic twiddle recursion —
 `brv8 1 = 2⁷`, `brv8 (2k) = brv8 k / 2`, `brv8 (2k+1) = brv8 k / 2 + 2⁷` (`brv8_lo`/`brv8_hi`/`brv8_1`/
 `brv8_twiddle_rec`, via EasyCrypt's `BitReverse`) — so the `k`-counter walking the precomputed `zetas` array
-enumerates the tree's twiddles in heap/BFS order. What now remains is only the **literal `while`-loop syntax
-and mutable-array representation** — that an EasyCrypt `proc` with the three nested `while`s over a Go
-`[256]int64` (rather than the list-block functional model) drives `jloop` over the segments — with **no
-algorithmic, index, termination, or twiddle-schedule content left** (the butterfly = CRT split, the
-`a[j]`/`a[j+len]` index arithmetic, BFS = DFS, the schedule's well-formedness, termination, *and* the
-bit-reversal index identity are all proved above). That residual is the same model↔code conformance all of
-surface B covers, established by the byte-exact KATs against CIRCL + go-qrllib. This whole boundary is a pure
+enumerates the tree's twiddles in heap/BFS order. **The literal `while`-loop transcription is now also
+machine-checked:** `ml_adsa_ntt_imp.ec` gives all three nested `while`s as EasyCrypt `proc`s over a mutable
+array (an `int->coeff` map, `a.[i] <- v` = `aset a i v`) — `NTTimp.jl` (inner butterfly = `jfun`,
+`jl_correct`), `NTTimp.sl` (the start-loop = one full level = `levelf`, `sl_correct`), and `NTTimp.ntt`
+(the len-loop = the level-by-level composition = `applyf`, `ntt_correct`) — each proved by Hoare logic with
+explicit loop invariants (the locality lemmas `levelf_local`/`applyf_local` carry the `[0,256)` array
+footprint across levels). What now remains is only the **encoding bridge**: that the flat `int->coeff`
+array composition (`applyf`) and the list-block model (`forest_step`/`fips_ntt_loop`, already shown to
+compute the per-root evaluation vector) are two encodings of the *same* level-loop — the
+absolute-index↔block correspondence (`jloop_eq`/`forest_step_jloop`) lifted across all levels. That
+residual is pure model↔model encoding (the file's own `fips_ntt_loop` comment calls flat↔list "pure
+syntax"), also covered operationally by the byte-exact KATs against CIRCL + go-qrllib. This whole boundary is a pure
 **implementation-conformance** matter, **not a security assumption** — the algorithm-level proofs never
 invoke the NTT.
 
@@ -103,9 +108,9 @@ invoke the NTT.
 | Coq / Rocq (`nsatz` over R) | system | 5 files | green |
 | **Total prover artifacts** | `formal/check-all.sh` | **32** | **ALL GREEN** |
 | Gobra (ETH, Docker) | `formal/gobra/` | 6 theorems | green |
-| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **45** | 45/45 |
+| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **49** | 49/49 |
 
-Lemma tally: **168 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 200 machine-checked**, plus 6
+Lemma tally: **202 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 234 machine-checked**, plus 6
 Gobra code-level theorems. (Artifact *file* count is 32; lemma count is 200 — both framings are used in
 the literature; do not conflate them. All figures are produced by `formal/count-artifacts.sh`, the single
 source of truth.)
@@ -113,8 +118,8 @@ source of truth.)
 > **Discrepancy note.** Earlier prose used a deprecated lemma tally of "77 (= 72 EC + 5 Coq)", which
 > conflated *5 Coq files* with *5 Coq lemmas* (Coq has 32 lemmas/theorems) and predated the masking /
 > rounding / NTT / NTT-inversion / GHHM additions; older docs also quote stale artifact counts (23, 24).
-> The authoritative current numbers are those of `formal/count-artifacts.sh`: **33 artifacts**
-> (23 classical + 5 quantum + 5 Coq) and **200 lemmas** (168 EC + 32 Coq), with `genuineness.sh` at 45/45.
+> The authoritative current numbers are those of `formal/count-artifacts.sh`: **35 artifacts**
+> (25 classical + 5 quantum + 5 Coq) and **234 lemmas** (202 EC + 32 Coq), with `genuineness.sh` at 49/49.
 > The cross-consistency audit `docs/35` reconciles every document to these.
 
 ---
@@ -230,10 +235,10 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 ## 7. How to reproduce (commands)
 
 ```
-# Algorithm proofs (33 artifacts): EasyCrypt classical+QROM + Coq
-cd formal && zsh check-all.sh                 # → ALL GREEN (23 classical + 5 quantum + 5 Coq = 32)
-zsh count-artifacts.sh                         # → 33 artifacts, 200 lemmas (168 EC + 32 Coq), 45/45, 6 Gobra
-zsh genuineness.sh                            # → 45/45 (weaken axiom ⇒ proof breaks)
+# Algorithm proofs (35 artifacts): EasyCrypt classical+QROM + Coq
+cd formal && zsh check-all.sh                 # → ALL GREEN (25 classical + 5 quantum + 5 Coq = 35)
+zsh count-artifacts.sh                         # → 35 artifacts, 234 lemmas (202 EC + 32 Coq), 49/49, 6 Gobra
+zsh genuineness.sh                            # → 49/49 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)
 cd formal/gobra && zsh run.sh                 # → 6 theorems, "Gobra found 0 errors"; zsh genuineness.sh → 5/5
 # Implementation conformance + KATs (CIRCL + go-qrllib byte-accept)

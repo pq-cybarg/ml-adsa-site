@@ -1413,13 +1413,33 @@ classical array) and is genuineness-probed in `formal/genuineness.sh`:
 | 1 — transcript ≤ key-leak | `transcript_le_keyleak` | `byequiv` (perfect simulation) | **0** | **proven** — genuineness probe: weakening its query-list correspondence (`DforgeOpen.qs{1}=DforgeKey.qs{2}` → `true`) *breaks* the proof |
 | 2 — PRF refresh | `open_refresh_hop` = `prf_security` | reduction | `adv_prf` | **proven** — probe: `≤ adv_prf` → `≤ 0` breaks it |
 | 3 — clean `Q`-target | guessing + union bound | standard | factor `Q` | standard argument (no per-scheme lemma needed) |
-| 4 — lattice hardness | `eq_exact` → `ml_adsa_euf` / `ml_adsa_qrom` | reduction | assumption | **proven** (the ML-DSA keystones) |
+| 4 — lattice hardness | `eq_exact` → `ml_adsa_euf` (ROM) / `ml_adsa_F_qrom` (QROM) | reduction | assumption | **proven** (the ML-DSA keystones; QROM under EasyPQC) |
 
-The capstone `deployed_open_uncond` *composes* these. **QROM:** the refresh hop is RO-free, so Hops 1–3 are
-identical in the QROM; only Hop 4's `eps_content` swaps to `adv_mlwe + Pr[QROM-STMSIS]`
-(`ml_adsa_qrom.qrom_eufcma_uncond`). So Hop 1 is **not** an outstanding obligation — it is a compiled,
+The capstone `deployed_open_uncond` *composes* these and is written **`eps`-generic**: it proves
+`Pr[real deployed forge] ≤ adv_prf + eps` *given* `Pr[ideal key-leak forge] ≤ eps`, leaving the lattice-instance
+bound `eps` as a parameter. So Hop 1 is **not** an outstanding obligation — it is a compiled,
 genuineness-checked `byequiv` already in CI; a reviewer reading only this site sees the prose, while the
 `.ec` source lives in the formal corpus (`formal/`).
+
+**ROM vs QROM — exactly what is mechanized where (honest scope).** The deployed reduction is split across two
+EasyCrypt toolchains, by design:
+
+- **Hops 1–3 (`ml_adsa_F_open.ec`, classical, eps-generic).** `transcript_le_keyleak` (a `byequiv` — a fact
+  about the *algorithm*: the transcript is a deterministic function of key + public values) and the PRF refresh
+  are **RO-free**: they never reference the random oracle, so they hold *verbatim* whether `H` is a classical or
+  quantum RO. This is the model-agnostic part.
+- **Hop 4 (the lattice instance), per model.** Instantiate `eps`: **ROM** `eps = Q·(adv_mlwe + Pr[STMSIS])`
+  (`ml_adsa_euf.msufcma_uncond`); **QROM** `eps = Q·(adv_mlwe + Pr[QROM-STMSIS])`
+  (`ml_adsa_F_qrom.F_qrom_eufcma_in_domain`, which transports `ml_adsa_qrom.qrom_eufcma_uncond` to the
+  domain-keyed message — compiled green under the **EasyPQC quantum switch**).
+
+What is therefore *not* a single end-to-end theorem in one file is the **cross-toolchain substitution**:
+`deployed_open_uncond` (classical) supplies the `eps`-generic bound; `ml_adsa_F_qrom` (quantum) supplies the
+QROM value of `eps`; taking `eps` to be that value is licensed by the RO-freeness of Hops 1–3. This is the
+standard way an RO-agnostic reduction is reused across models (prove it once with `eps` abstract, plug in each
+model's bound) — but the final plug-in for the QROM is an analytic step between two machine-checked artifacts,
+not itself a mechanized lemma. Both endpoints (`deployed_open_uncond` and `F_qrom_eufcma_in_domain`) compile
+green; the bridge is the model-agnosticism argued above.
 
 Composing: `Pr[deployed forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])` — the leak (step 1) is paid for by the
 refresh (step 2, `adv_prf`); the lattice hardness (step 4) lives entirely in the clean, un-queried target.

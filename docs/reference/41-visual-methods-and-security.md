@@ -678,6 +678,10 @@ independently without knowing each other's nonces"): they coordinate on the **pu
 commitments `wⱼ`, never on the private nonces `yⱼ` — and the freshness of each per-message key (not any
 hiding of `wⱼ`) is what makes that safe.
 
+While this design is what enables non-interactivity, it *requires* publishing the full `wᵢ`. The next
+paragraph explains why that is safe — despite the fact that an observer can recover the nonce and the
+per-content key from it — thanks to the one-time PRF refresh.
+
 **🔓 Why publishing the full `wᵢ` is safe (the central point).** In ML-ADSA we *deliberately* publish the
 full per-signer commitment `wᵢ = A·yᵢ` — single-key ML-DSA never does this (its verifier recomputes `w`). An
 observer **can** invert it: `A` is tall (`k ≥ ℓ`, full column rank), so `wᵢ = A·yᵢ` has a *unique* preimage
@@ -691,8 +695,12 @@ material is a *spent, single-use* key for an **already-signed** message; an EUF-
 exposed. Recovering a signed message's key reveals nothing toward any other message (the PRF refresh
 firewall). This is the core of the **F-C4 many-time** argument, machine-checked as a four-hop reduction —
 **transcript ≤ key-leak** (`transcript_le_keyleak`) → **PRF refresh** (`= adv_prf`) → **clean un-queried
-`Q`-target** → **lattice hardness** (`eq_exact` → MLWE + SelfTargetMSIS), giving
-`Pr[forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])`. The full table (published vs recoverable vs protected),
+`Q`-target** → **lattice hardness** (`eq_exact` → MLWE + SelfTargetMSIS). It yields the bound
+
+`Pr[forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])`,
+
+where the first term accounts for PRF security and the second for lattice hardness on a clean, un-queried
+target. The full table (published vs recoverable vs protected),
 the step-by-step four hops, and the message-binding fix that keeps `pk*_C` single-purpose are in **§6**
 ("Why the nonce `y` must be secret *while in use*…" and "Machine-checked: the deployed (public-`wᵢ`)
 security").
@@ -1391,8 +1399,8 @@ explicit shape of `deployed_open_uncond`; each hop is a named, machine-checked s
    keys of *signed* messages reveals nothing about any other.
 3. **Reduce to a single un-queried target.** A successful EUF-CMA forgery is on a **fresh** `m*` never signed;
    its key was never handed out (step 1) and is independent of all leaked keys (step 2). Guess which of the
-   `Q` random-oracle targets the forgery hits (factor `Q`); for that target the adversary has seen **nothing**
-   — its key/nonce are clean, exactly the single-message ML-DSA setting.
+   `Q` random-oracle targets the forgery hits (**introducing a factor of `Q`**). For that target the adversary
+   has seen **nothing** — its key and nonce are clean, exactly the single-message ML-DSA setting.
 4. **Lattice hardness (`eq_exact` → MLWE + SelfTargetMSIS / Module-SIS).** A verifying forgery against the
    clean target *is* a SelfTargetMSIS witness (and the key's secrecy is Module-LWE). No new assumption.
 

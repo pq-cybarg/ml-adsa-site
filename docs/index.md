@@ -37,9 +37,9 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 
 | | |
 |---|---|
-| **Prover artifacts** | **36** — 26 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
-| **Machine-checked lemmas** | **244** (212 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
-| **Genuineness** | **50/50** — each proof's named primitive is weakened and the proof confirmed to break |
+| **Prover artifacts** | **38** — 28 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
+| **Machine-checked lemmas** | **254** (222 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
+| **Genuineness** | **53/53** — each proof's named primitive is weakened and the proof confirmed to break |
 | **Implementation** | reference impl at **all three parameter sets** (ML-ADSA-44/65/87, NIST Cat 2/3/5) byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors; byte-identical **AVX2 NTT** kernel |
 
 Highlights of the formal development:

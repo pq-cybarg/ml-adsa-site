@@ -44,8 +44,8 @@ rogue-key resistance. We further prove that producing *any* member of the equiva
 signatures for a fixed `(pk*, m)` is as hard as a single ML-DSA forgery (no advantage from
 signature multiplicity), in ROM and QROM.
 
-The scheme is accompanied by **244 machine-checked lemmas** (212 EasyCrypt + 32 Coq) across **36 prover
-artifacts** (26 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
+The scheme is accompanied by **254 machine-checked lemmas** (222 EasyCrypt + 32 Coq) across **36 prover
+artifacts** (28 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
 (tallies reproducible via `formal/count-artifacts.sh`), a reference implementation **at all three parameter sets** cross-validated against CIRCL and
 theQRL/go-qrllib, known-answer tests, a byte-identical AVX2 NTT kernel, and live multi-process
 demonstrations of decentralized aggregation and order/grouping independence. We discuss limitations —
@@ -127,7 +127,7 @@ lattice multi-signatures, letting us prove concurrent security with **no ROS/AGM
    ROM and QROM (§6.5).
 5. **Accountability layers** — an epoch Merkle key-tree (non-equivocation), registry + proof-of-possession
    (rogue-key resistance), and a ZKP-free decoy mechanism for signer-set privacy (§4, §8).
-6. **A reproducible assurance package**: 244 machine-checked lemmas across 36 prover artifacts (+6 Gobra
+6. **A reproducible assurance package**: 254 machine-checked lemmas across 38 prover artifacts (+6 Gobra
    code-level theorems), a CIRCL/go-qrllib-anchored reference implementation, KATs, and live decentralized
    demonstrations (§7, §9).
 
@@ -455,7 +455,7 @@ verifiers accept — `(1312, 2420)` at -44, `(1952, 3309)` at -65, `(2592, 4627)
 signer/verifier/aggregator are exercised against CIRCL's `mldsa44/65/87`; the -87 path is additionally the
 legacy reference and is asserted byte-identical to it).
 Assurance has three surfaces (full traceability in `docs/31`): (i) **algorithm-level machine-checked
-proofs** — 244 lemmas (212 EasyCrypt + 32 Coq) across 36 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
+proofs** — 254 lemmas (222 EasyCrypt + 32 Coq) across 38 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
 **implementation conformance** — KATs and CIRCL/go-qrllib cross-checks; (iii) **code-level structural
 proofs** — Gobra theorems for the Merkle/one-time/framing/decision-linearity invariants. We are explicit
 about boundaries: the machine-checked proofs are about the algorithm/model; Go conformance is

@@ -672,7 +672,11 @@ must exist before responses (this is the Fiat–Shamir binding, and exactly why 
 pre-publication**, not by an interactive exchange: no signer waits on a message *from* another signer or
 *from* a coordinator, and no challenge is ever transmitted. The earlier framing of this as an
 aggregator-driven "round 1 / round 2" would describe the interactive MuSig design that ML-ADSA explicitly is
-**not** (see [[ml-adsa-noninteractive]]).
+**not** (see [[ml-adsa-noninteractive]]). The deeper question — *how* each signer derives the shared `c*` and
+responds without ever knowing another signer's nonce — is answered in **§6** ("Why signers can aggregate
+independently without knowing each other's nonces"): they coordinate on the **public, per-message one-time**
+commitments `wⱼ`, never on the private nonces `yⱼ` — and the freshness of each per-message key (not any
+hiding of `wⱼ`) is what makes that safe.
 
 **🔒 Security.** The self-derived `c*` binds the **entire** commitment `W*`, which is exactly what defeats the
 Drijvers/ROS attack — giving concurrent security with **no ROS/AGM/OMDL assumption**
@@ -1029,14 +1033,19 @@ zeroized. Read it before deploying.
 
 ### The trust boundary at a glance
 
+There are **three** tiers, not two — the middle one is the subtle part:
+
 ```mermaid
 flowchart TB
-  subgraph PRIV["PRIVATE — never transmitted · constant-time · ZEROIZE after use"]
+  subgraph PRIV["PERMANENTLY PRIVATE — never leaks, ever · constant-time · ZEROIZE"]
     direction LR
-    p1["root seeds<br/>ξ · msk · regsk"]:::secret
-    p2["secret keys<br/>ρ′ · K · s1 · s2 · t0 · sk_C"]:::secret
-    p3["nonces<br/>y · yᵢ"]:::secret
-    p4["transients<br/>c·s1 · c·s2 · c·t0 · w · r0"]:::secret
+    p1["root seeds<br/>ξ · msk · regsk · ρ′ · K"]:::secret
+    p5["long-term s1·s2·t0 (standalone ML-DSA)<br/>and every NOT-YET-signed content's key (ML-ADSA, PRF firewall)"]:::secret
+  end
+  subgraph ONETIME["1-TIME — secret WHILE signing, effectively PUBLIC once that content is signed (harmless: never reused)"]
+    direction LR
+    p3["per-content nonce & key<br/>y_C · s1_C · s2_C · t0_C"]:::danger
+    p4["round transients<br/>c·s1 · c·s2 · c·t0 · w · r0"]:::danger
   end
   subgraph PUBL["PUBLIC — safe to publish · branch freely · no zeroization"]
     direction LR
@@ -1045,11 +1054,18 @@ flowchart TB
     u3["ML-ADSA contributions<br/>tᵢ · wᵢ · zᵢ · t* · W* · z* · c*"]:::public
     u4["derived public<br/>μ · tr · epoch root · registry · PoP"]:::derived
   end
-  PRIV ==>|"one-way: derive public from private,<br/>NEVER the reverse"| PUBL
+  PRIV ==>|"PRF firewall: derive one-time keys from msk —<br/>NEVER the reverse"| ONETIME
+  ONETIME ==>|"signing publishes wᵢ, zᵢ ⇒ that content's<br/>one-time key becomes recoverable (harmless: spent)"| PUBL
   classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
   classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
   classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
 ```
+
+The amber **1-TIME** tier is the honest status of ML-ADSA's per-content nonce/key: secret *while* a round is
+live, then effectively public once it is signed (since `wᵢ` is published and `A` is tall). It is *not* a leak
+that matters, because each such value is used exactly once. Only the red **permanent** tier — `msk`/`regsk`
+and every unsigned content's key — must stay secret across all future signatures.
 
 ### Classification table — ML-DSA
 
@@ -1088,10 +1104,10 @@ constant-time, but the released value is public and need not be hidden or zeroiz
 
 | Value | Lives in | Class | Rand? | CT? | Zero? |
 |---|---|---|:---:|:---:|:---:|
-| `msk` — master seed (32 B) | signer | **PRIVATE** | **YES** (CSPRNG) | yes | **YES** |
-| `sk_C = (s1,s2,t)` per content | transient | **PRIVATE** | derived (PRF) | **YES** | **YES** |
-| `yᵢ = DeriveNonce(msk,C)` | transient | **PRIVATE** | **YES** (PRF, one-time) | **YES** | **YES** |
-| `regsk` — registration key | signer | **PRIVATE** | yes | yes | **YES** |
+| `msk` — master seed (32 B) | signer | **PRIVATE (permanent)** | **YES** (CSPRNG) | yes | **YES** |
+| `regsk` — registration key | signer | **PRIVATE (permanent)** | yes | yes | **YES** |
+| `sk_C = (s1,s2,t0)` per content | transient | **1-TIME** ¹ | **YES** (PRF) | **YES** | yes (until published) |
+| `yᵢ = DeriveNonce(msk,C)` | transient | **1-TIME** ¹ | **YES** (PRF, one-time) | **YES** | yes (until published) |
 | `tᵢ` — content key | epoch tree, pool | PUBLIC | no | no | no |
 | `wᵢ = A·yᵢ` — commitment | pool | PUBLIC | no | no | no |
 | `zᵢ` — response | broadcast | PUBLIC | no | no | no |
@@ -1101,6 +1117,18 @@ constant-time, but the released value is public and need not be hidden or zeroiz
 | `σ* = (c̃*, z*, h*)` | published | PUBLIC | no | no | no |
 | epoch root, registry, PoP, `regpk` | published | PUBLIC | no | no | no |
 | one-time guard state (used-set) | durable store | not secret — **INTEGRITY-CRITICAL** | n/a | n/a | **must persist** |
+
+¹ **"1-TIME" is a third tier between PRIVATE and PUBLIC, and the distinction is load-bearing.** Because
+ML-ADSA publishes `wᵢ`, a per-content one-time value is **secret only while the round is in progress** and
+becomes **effectively public once content `C` is signed**: `A` is tall, so `wᵢ = A·yᵢ` reveals `yᵢ`, and then
+`zᵢ` reveals `s1_C` (and `tᵢ` reveals `s2_C`, `t0_C`). So `yᵢ`/`sk_C` are **not** permanently private the way
+they are in *standalone* ML-DSA (where `w` is never published). That is harmless solely because they are
+**one-time** — each is used at most once (refresh + the durable guard), so its post-signing disclosure
+unlocks nothing reusable. The **only permanently-private** secrets are `msk`/`regsk` and, through them, *every
+not-yet-signed content's key* (an independent PRF output that stays permanently-private until it too is spent
+into the 1-TIME tier by being signed). CT/zeroize still apply *during* a round (the value is genuinely secret
+until `zᵢ` is published); after that they are moot because the value is public anyway. See "Why the nonce `y`
+is private…" above for the forgery analysis — and note its title is, strictly, *"secret while in use."*
 
 ### Randomness — what must be unpredictable, and what must never repeat
 
@@ -1115,6 +1143,131 @@ constant-time, but the released value is public and need not be hidden or zeroiz
 >
 > **Public hashes are not secrets.** `c̃`, `c`, `μ` are fully determined and public; there is nothing random
 > to protect about them.
+
+### Why the nonce `y` must be secret *while in use* — and why publishing `wᵢ = A·yᵢ` afterward is safe
+
+The nonce blinds the signing key during a round, so its handling deserves a precise statement. Note up front
+(this is the corrected framing): in ML-ADSA `y` is **not permanently private** — publishing `wᵢ = A·yᵢ` makes
+it recoverable, so it is a **one-time ephemeral**: secret *while the round is live*, effectively *public
+afterward*. What must be protected is its **secrecy during the round** and its **one-time use**, not its
+secrecy forever.
+
+- **Leaking `y` even once recovers the whole key.** The response `z = y + c·s1` is public and the challenge
+  `c` is public. Anyone who learns `y` computes `c·s1 = z − y`; since `c` is (with overwhelming probability)
+  invertible in `R_q`, that gives `s1`, and then `s2 = t − A·s1` — the **entire secret key, from a single
+  signature**. So `y` must never be transmitted, logged, swapped to disk, or left in freed memory.
+- **Predicting `y` is as bad as leaking it.** A guessable or biased `y` enables the same `z − y` recovery —
+  hence `y` must be *unpredictable*, even though here it is *deterministic* (a PRF output reproducible only
+  by the secret holder).
+- **Reusing `y` recovers the key.** `z = y + c·s1` and `z′ = y + c′·s1` give `z − z′ = (c − c′)·s1` — the
+  lattice analogue of ECDSA `k`-reuse. This is what the one-time rule below prevents.
+- **Publishing `wᵢ = A·yᵢ` *does* expose `yᵢ` — and the *per-message one-time refresh* is what makes that
+  harmless.** Be precise (this is a subtle point worth getting right): ML-DSA's `A` is **tall/square**
+  (`k ≥ ℓ`, full column rank), so `wᵢ = A·yᵢ` has a **unique** preimage — `yᵢ` is recoverable from `wᵢ` by
+  plain linear algebra (`ŷ = Â⁺ŵ` per NTT slot). It is **not** hidden by Module-SIS (SIS-hardness requires a
+  *wide* matrix). So an observer of the public `(wᵢ, zᵢ)` *can* recover `yᵢ` and then `s1ᵢ` — but **only the
+  one-time key for the message that was already signed.** That is exactly what the **L1 content refresh**
+  defends: every message `m` gets a *fresh, independent* one-time key **and** nonce, both deterministically
+  PRF-derived from `m` (`ContentKeyDerive`/`DeriveNonce` — no coordinator, no interaction). An EUF-CMA
+  forgery must be on a **fresh** `m*` never signed; its key `ExpandS(PRF(seed,"F.key",m*))` is an independent
+  PRF output the signer never used, so its `(w, z)` were never published and it is **never exposed**.
+  Recovering an already-signed message's key reveals nothing about any other message's key (PRF firewall), so
+  the leak buys an attacker nothing toward a forgery. This is the F-C4 *many-time* keystone: security reduces
+  to single-message ML-DSA up to `adv_prf` (`ml_adsa_F_refresh.ec`, `ml_adsa_F_manytime.ec`).
+
+```
+ PUBLIC :  wᵢ = A·yᵢ          (tall A ⇒ yᵢ IS recoverable — NOT SIS-hidden)
+           zᵢ = yᵢ + c*·s1ᵢ    ⇒ an observer can recover THIS message's one-time key s1ᵢ,ₘ
+ SAFE BECAUSE:  s1ᵢ,ₘ is a FRESH per-message key (PRF). A forgery needs a DIFFERENT message m*,
+                whose key s1ᵢ,ₘ* is an independent PRF output never used ⇒ never published ⇒ never exposed.
+ PRIVATE:  the master seed (and every unused message's key) — held by the PRF firewall.
+```
+
+**What the leak does *not* touch — no more leaky than ML-DSA-87 itself.** This is the load-bearing point:
+recovering a finished round's one-time `(yᵢ,C, s1ᵢ,C, s2ᵢ,C)` compromises *only* content `C`'s key — which is
+already signed and never reused — and reaches **neither** thing that matters for any future signature:
+
+- **The master seed `msk` is untouched.** `s1ᵢ,C = ExpandS(PRF(msk,"F.key",C))`. Recovering `msk` from
+  `s1ᵢ,C` would require inverting both `ExpandS`/SHAKE (preimage-resistant) *and* the keyed PRF (one-way); and
+  by PRF security, even **arbitrarily many** recovered one-time keys across many signed contents reveal
+  nothing about `msk`.
+- **Every other / future content's key is untouched.** `s1ᵢ,C'` for `C' ≠ C` is an *independent* PRF output;
+  it was never used, so its `(w, z)` were never published, so it is never exposed — and it is uncorrelated
+  with `s1ᵢ,C` (the no-leakage tests measure this empirically: cross-content `max|corr| ≈` the noise floor).
+
+So the secret material that governs **all future signatures** — `msk` and every not-yet-signed message's key
+— is protected by *exactly* ML-DSA's own primitives: Module-LWE for each content key's secrecy, plus the same
+SHAKE-based PRF ML-DSA already uses (no new assumption). The `wᵢ` exposure only ever surrenders a one-time key
+that has *already done its single job*. **In every future case, ML-ADSA is therefore no more leaky than
+ML-DSA-87** — it adds only the harmless disclosure of spent, single-use keys; it never weakens the long-term
+secret or any unused key relative to baseline ML-DSA-87.
+
+In single-key ML-DSA the commitment `w` is never published at all (the verifier recomputes it), a second
+line of defense. ML-ADSA *does* publish `wᵢ` to enable non-interactive aggregation; the per-message one-time
+refresh is precisely what keeps that publication safe. **Caveat:** this firewall requires the key/nonce to
+be bound to the **full message** (default `ConsensusAggregate`, content = the signing root, unique per
+slot/committee/**data**). A "predictable-label" variant (`ConsensusAggregateLabeled`) that keys the refresh
+by `(slot, committee)` *decoupled* from the data — for verifier pre-derivability of `pk*` — must bind the
+data into the key-derivation content (or otherwise handle the `wᵢ` leak), else recovering the per-label key
+would let one re-sign different data under the same label.
+
+### The commit→respond window — you can't be interrupted into a forgery
+
+A signer publishes its commitment `wᵢ` and then, *after* seeing the cohort's `{wⱼ}` (to derive `c*`),
+releases its response `zᵢ`. That gap — `wᵢ` public, `zᵢ` not yet — is the natural place to try to interrupt
+or hijack a signer. Three facts close it:
+
+1. **Nothing secret leaks until you release `zᵢ`.** The public `wᵢ` reveals only `yᵢ` (the nonce);
+   recovering the key `s1ᵢ,C` needs `zᵢ` **and** `wᵢ` *together* (`s1ᵢ,C = c*⁻¹(zᵢ − yᵢ)`). So in the window
+   no one can forge your contribution — and, just as important, **no one can *complete* your signature for
+   you**, because producing a valid `zᵢ` requires `s1ᵢ,C`, which only you hold. If you are interrupted and
+   never release `zᵢ`, there is **no signature and no leak**: abandoning a round is completely safe.
+2. **The commitment is locked to the message you offered.** `wᵢ = A·DeriveNonce(seed, C)` is a
+   *deterministic function of the content `C`* — not a random, message-agnostic nonce that a challenge later
+   pins to a message. It is intrinsically tied to `C`, so the only signature `wᵢ` can ever take part in is
+   one on `C`. Even granting a hypothetical break, **the only message forgeable from your published `wᵢ` is
+   `C` — exactly the message you offered to sign.** You cannot be steered into signing something else with
+   the commitment you already put out.
+3. **A re-run never reuses the nonce.** If a round must be redone (the cohort changed, or a bound check
+   aborts), it advances to a *fresh* content index `C'` with new `(yᵢ', s1ᵢ')` (spec N3 — *never* resample
+   `y` for the same `C`), and the durable one-time guard refuses a second `zᵢ` for the same `(signer, C)`
+   (N1). So an interrupt-and-retry can never coax two responses `zᵢ, zᵢ'` that share one nonce under two
+   different challenges — the single event that *would* leak the key (`zᵢ − zᵢ' = (c* − c*')·s1ᵢ`).
+
+Net: the window exposes nothing secret (1), whatever it does expose is bound to the offered message (2), and
+you cannot be tricked into the nonce reuse that would actually break the key (3) — so being interrupted
+mid-round is, at worst, a *liveness* event (the round simply doesn't complete), never a forgery or a leak.
+
+### Why signers can aggregate independently without knowing each other's nonces
+
+A common puzzle: the shared challenge `c*` depends on **every** signer's commitment, yet no signer knows
+another's nonce. How can each one compute `c*` and respond, non-interactively, alone? Three facts resolve it:
+
+1. **The challenge binds the *sum of commitments*, not the nonces:** `c* = H(μ ‖ HighBits(W*))` with
+   `W* = Σⱼ wⱼ`. Every `wⱼ = A·yⱼ` is **public** (and is a *fresh, one-time, per-message* value — its `yⱼ`
+   is recoverable, but harmlessly so, per the refresh argument above).
+2. **Commitments are deterministic and pre-published**, so every signer (and any observer) sees the identical
+   `{wⱼ}`, forms the identical `W*`, and derives the identical `c*` — **independently, with no exchange and
+   no shared secret.**
+3. **Each response uses only local secrets:** signer `i` computes `zᵢ = yᵢ + c*·s1ᵢ` from its own
+   `(yᵢ, s1ᵢ)` and the public `c*`. It needs the others' **commitments** (public), **never** their
+   **nonces** (private).
+
+```
+ what signer i must KNOW                           what signer i NEVER needs
+ ──────────────────────────                        ─────────────────────────
+ own private:  yᵢ , s1ᵢ                             others' yⱼ   (private to j)
+ public pool:  every wⱼ  → W* = Σ wⱼ → c*           others' s1ⱼ  (private to j)
+ then:         zᵢ = yᵢ + c*·s1ᵢ  → broadcast
+```
+
+Linearity then makes the parts compose: `Σⱼ wⱼ = A·(Σⱼ yⱼ)` is the commitment of the *summed* nonce, and
+`Σⱼ zⱼ = (Σⱼ yⱼ) + c*·(Σⱼ s1ⱼ)` is the response for the *summed* key `t* = Σⱼ tⱼ`. The verifier reconstructs
+the commitment from the aggregate via the hint and **never sees any individual nonce**. In one line: signers
+coordinate on **public, pre-published, per-message-one-time commitments — not on any shared secret or
+long-term state** — which decouples "agree on the shared challenge" from "expose anything reusable," giving
+non-interactivity *and* aggregatability at once. (The commitments don't *hide* their nonces; the **freshness**
+of each per-message key is what makes their exposure harmless — see the refresh argument above.)
 
 ### Constant-time — where it matters, and where it does **not**
 
@@ -1158,13 +1311,42 @@ sum) — publishing them is the whole point.
 > signature, never both. The guard state is *not secret*, but it is **integrity- and durability-critical**:
 > losing or rolling it back re-enables nonce reuse.
 
+### Machine-checked: the deployed (public-`wᵢ`) security — and an empirical demonstration
+
+Everything in this section is now backed by mechanized proofs, not prose:
+
+- **Deployment EUF-CMA (ROM + QROM), `formal/ml_adsa_F_open.ec`.** Models the *deployed, transcript-exposing*
+  oracle — each query returns the full round transcript `(tᵢ, wᵢ, zᵢ, hᵢ)`, not just `σ*` — and proves
+  `Pr[deployed forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])` (ROM) / `…Pr[QROM-STMSIS]` (QROM). Lemmas:
+  `nonce_is_public` (states the `yᵢ`-recovery explicitly), `transcript_le_keyleak` (the transcript leaks no
+  more than the whole one-time key), `open_refresh_hop`/`keyleak_refresh_hop` (the PRF refresh, via
+  `prf_security`), `deployed_open_uncond` (the capstone, two pillars: refresh confines the leak; MLWE+SIS is
+  the lattice hardness of the clean un-queried target).
+- **Deterministic-nonce safety, `formal/ml_adsa_F_nonce.ec`.** `reuse_iff_collision` (key recovery succeeds
+  *iff* nonces collide under different challenges), `binding_failure_leaks` (same content + two challenges ⇒
+  leak — why content-binding + one-time are necessary), `reuse_attack_is_collision` (with both, the only
+  residual is a PRF nonce collision — negligible; why entropy is necessary).
+- **Empirical corroboration, `go-mladsa/recover_nonce_test.go`.** On the *real* `ExpandA` matrix, `y` is
+  recovered exactly from public `(A, w)` by `F_q` linear algebra (256/256 NTT slots) — confirming `A` is
+  tall, so the leak is real and the refresh (not "hiding") is what carries the security.
+
+### Optional hardening: XMSS-style group-tree rotation (continuity)
+
+For long-lived groups, `go-mladsa/grouptree_rotation.go` adds an **additive** layer (the PRF refresh is
+untouched): each epoch gets a fresh per-member `EpochKeyTree` (an XMSS-style subtree, registration-signed
+root = non-equivocation anchor, one content = one leaf = auditable one-time use); the **next** epoch's trees
+are pre-built and pre-committed before the boundary, with an **overlap window**, so the group's ability to
+aggregate is never lost (`TestGroupTreeRotation_Continuity`: 5 rotated epochs, each FIPS-204-valid). Rotation
+rotates the *commitment* (forward security: old trees erasable), not the secret — content keys remain
+PRF-derived, so there is no key-material exhaustion.
+
 ---
 
 ## 7. Traceability and reproduction
 
 Each diagram maps a step to its **Go symbol** and its **proof artifact**; the full row-by-row matrix is the
 verification dossier (`docs/31`) and the implementation-conformance map (`docs/20`). Counts are the single
-source of truth from `formal/count-artifacts.sh` (**36 artifacts / 244 lemmas / 50 genuineness / 6 Gobra**).
+source of truth from `formal/count-artifacts.sh` (**38 artifacts / 254 lemmas / 53 genuineness / 6 Gobra**).
 
 ```
 # regenerate the proof tallies these diagrams reference

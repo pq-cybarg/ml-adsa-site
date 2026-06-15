@@ -247,6 +247,43 @@ mitigations — please pressure-test both:
    for (e.g. via opening/part-root manipulation, `ProvenanceVerifyF`)? Does any value derived from the
    exposed `yᵢ`/`s1ᵢ` of a spent key leak across the PRF refresh boundary?
 
+### 6.8 Internal pentest suite (`go-mladsa/pentest_test.go`) — 15 mounted attacks
+Each attack mounts a concrete adversary and asserts the scheme's response (a *finding* is logged explicitly,
+never hidden). The suite is the running, regression-guarded record of what has been tried:
+
+| # | Attack | Result |
+|---|---|---|
+| 1 | Nonce reuse ⇒ key recovery (primitive `s1=(z−z')/(c−c')`) | succeeds at primitive level ⇒ one-time discipline is load-bearing |
+| 2 | Force reuse through the protocol (sign a `(member,content)` twice) | **defended** — `OneTimeGuard` refuses |
+| 3 | Recovered-key forgery under a reused `pk*_C` (payload-independent label) | **contained** — harmless iff `C` binds the message + one-time (→ §6.7) |
+| 4 | Cross-content (fresh-message) forgery from a spent key | **defended** — PRF refresh firewall (keys independent at the `1/q` floor) |
+| 5 | Aggregate malleability (tamper `z*`/`h*`, keep `c̃*`) | **defended** — FIPS-204 verifier rejects (SUF) |
+| 6 | Rogue key with a tampered PoP | **defended** — `VerifyPoP`/`BuildRegistry` reject |
+| 7 | Decoy / weight-0 injection | **defended** — registry weight 0 / `FilterRecognized` |
+| 8 | Malformed input (empty/short/long/junk) | **defended** — length guards, no panic, no accept |
+| 9 | Recovered-key forgery vs the **bound** construction (full `SignP`) | **defended** — `pk*_C` single-purpose; doesn't transfer (→ §6.7) |
+| 10 | Cross-context replay (`ctx="QRL"` → `"QRL:bridge"`/`"ZOND"`) | **defended** — `ctx` bound into `mu` |
+| 11 | Merkle proof forgery (wrong index / tampered path / non-member / leaf-node confusion) | **defended** — `0x00`/`0x01` domain separation |
+| 12 | Metadata tamper (`part_root`/`reg_root`/`epoch`/`payload`) | **defended** — all bound into the signed message |
+| 13 | Duplicate-participant weight inflation | **hardened** — `AggregateF` now dedups by ID (`dedupMembersByID`) |
+| 14 | PRF domain-separation collision (`F.key` vs `F.nonce`, cross-content) | **defended** — length-prefixed, fixed-width index |
+| 15 | Sub-aggregate / response splice across cohorts/messages | **defended** — shared-challenge FS binding (not freely mergeable) |
+
+**Hardening from this round (#13).** A duplicated participant entry (caller error or a malicious relay
+double-listing a member) previously double-counted toward `t*`, `z*`, `part_root`, and the tally if no
+one-time guard was supplied. `AggregateF` now canonically sorts **and dedups by ID**, so `[m,m] == [m]` —
+no weight inflation, and a single duplicate entry does not abort the aggregation (no liveness foot-gun).
+
+**Known liveness limitation (safety holds; please probe).** The per-signer *nonce commitment* `wᵢ = A·yᵢ`
+is published but **not** separately committed in the epoch key-tree (only the key `tᵢ` is). In the
+**decentralized** combine (`CombineFromPublic`), a Byzantine participant can therefore publish a deviating
+`wᵢ` (e.g. a large nonce) that inflates `‖z*‖ ≥ γ1−β` or the hint weight past `Ω`, forcing the cohort to
+**abstain** — a *liveness* DoS, **not** a forgery (unforgeability/SUF are unaffected; the standalone
+`AggregateF` derives all nonces honestly so the attack lives only in the open-broadcast path). Mitigation is
+protocol-level: the optimistic/fraud-audit path identifies the non-conforming contributor and re-aggregates
+without it. **Please attack:** can a Byzantine `wᵢ` do worse than force abstention — e.g. bias `c*` to a
+*forgery-favorable* value despite the full-`W*` binding (§6.1), or evade exclusion?
+
 ---
 
 ## 7. Reproduction

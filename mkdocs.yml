@@ -47,7 +47,11 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
   - pymdownx.details
   - pymdownx.arithmatex:
@@ -104,3 +108,4 @@ nav:
     - Submission process pack (IP / cover sheet): reference/38-submission-process-pack.md
     - Cryptanalysis solicitation: reference/39-cryptanalysis-solicitation.md
     - Parameter sets (Cat 2/3/5): reference/40-parameter-sets.md
+    - Visual walkthrough (methods & security): reference/41-visual-methods-and-security.md

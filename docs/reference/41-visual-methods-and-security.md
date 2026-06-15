@@ -1235,6 +1235,17 @@ already signed and never reused — and reaches **neither** thing that matters f
 - **Every other / future content's key is untouched.** `s1ᵢ,C'` for `C' ≠ C` is an *independent* PRF output;
   it was never used, so its `(w, z)` were never published, so it is never exposed — and it is uncorrelated
   with `s1ᵢ,C` (the no-leakage tests measure this empirically: cross-content `max|corr| ≈` the noise floor).
+- **Predicting the *next* `yᵢ,C'` is blocked by pseudorandomness — a *different* property than one-wayness.**
+  One-wayness only stops recovering `msk` from outputs (Route A: recover the key, then derive anything).
+  Computing the next nonce *without* `msk`, by extrapolating from the exposed `yᵢ,C` of signed contents
+  (Route B), is forbidden instead by PRF **pseudorandomness**: the output on any fresh, unqueried input is
+  indistinguishable from an independent uniform value *even given* all other outputs (advantage `adv_prf`; in
+  QROM the quantum-PRF advantage). Two clarifications that matter: the content label `C'` is *public and
+  predictable*, but that is irrelevant — a PRF is secure under known/chosen **inputs**; only the **key** is
+  secret, so the adversary can compute everything about `C'` except `PRF(msk, C')`. And `yᵢ,C` is
+  *deterministic* — but that is reproducibility by the key-holder (why one-time discipline forbids **reuse**),
+  not predictability by an outsider; a different `C'` is an independent draw. SHAKE-256 supplies both
+  one-wayness and pseudorandomness; the one that prevents calculating the next `y` is **pseudorandomness**.
 
 So the secret material that governs **all future signatures** — `msk` and every not-yet-signed message's key
 — is protected by *exactly* ML-DSA's own primitives: Module-LWE for each content key's secrecy, plus the same

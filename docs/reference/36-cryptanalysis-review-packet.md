@@ -209,6 +209,44 @@ Rogue-key/PoP soundness (`rogue_collapse`); epoch-tree non-equivocation binding;
 (`commit_hiding`); QROM-B adaptive-reprogramming derivation (`ghhm.ec`, Thm 6.1 + `Ynontriv` as standing
 inputs); the SelfTargetMSIS extraction tightness (`eq_exact`).
 
+### 6.7 Public-`wᵢ` key recoverability and the message-binding firewall (internal pentest #3)
+Because non-interactive aggregation must publish the **full** `wᵢ = A·yᵢ` (HighBits is non-additive, so the
+shared challenge `c̃* = H(μ‖HighBits(W*))` needs the entire `Σwᵢ`, not just per-signer high bits), and `A` is
+**tall** (k ≥ ℓ; full column rank per NTT slot), the per-signer nonce is recoverable by **`F_q` linear
+algebra**, `yᵢ = A⁺wᵢ` — this is *not* Module-SIS-hidden. Confirmed empirically: `recover_nonce_test.go`
+recovers `yᵢ` exactly on the real `ExpandA` (256/256 slots, 0 mismatches). With `yᵢ` and the public `zᵢ` the
+one-time `s1ᵢ` follows, hence the **entire per-content aggregate key `pk*_C` is reconstructable** once a
+content is signed (`pentest_test.go` Attack 3 mounts the full recovery and forges an arbitrary message under
+the reconstructed `pk*_C` with the real `SignP`).
+
+This is **not** a break of the deployed scheme, and the reason is two distinct, *both load-bearing*
+mitigations — please pressure-test both:
+
+1. **Per-message refresh firewall (cross-content secrecy).** Each content uses a *fresh, independent*
+   PRF-derived key (`ContentKeyDerive`); recovering a *spent* content's key gives nothing toward any
+   never-signed content (`pentest_test.go` Attack 4: signed- vs fresh-content keys are independent at the
+   `1/q` noise floor). The recovered material is confined to keys that are **already public-after-use**
+   (the three-tier secrecy model: permanent / one-time / public). The lattice hardness lives in the *clean,
+   un-queried* target, not in the exposed transcript — machine-checked in `ml_adsa_F_open.ec`
+   (`deployed_open_uncond`: `Pr[forge] ≤ adv_prf + Q·(adv_mlwe + STMSIS)`).
+
+2. **Message binding (single-purpose `pk*_C`).** The recovered `pk*_C` lets an attacker forge *any* message
+   **under that one key** — so it is only safe if `pk*_C` is bound to exactly one message. The default
+   consensus path binds the payload into the signed message; the **fix** (`harden_binding.go`) additionally
+   binds the payload into the *content-key derivation itself* (`MsgBoundContent` / `AggregateFBound`), making
+   `pk*_C` a deterministic function of the message: `pk*(m0) ≠ pk*(m1)` under the same base label. A key
+   recovered for a spent payload is then **not** the cohort-expected key for any other payload, so the
+   cross-payload forgery never transfers. `BindingGuard` adds an operational refuse-second-message guard
+   (defense-in-depth on the honest path). Tested: `harden_binding_test.go`
+   (`TestBinding_ClosesRecoveredKeyForgery`, `TestBindingGuard_RefusesSecondMessage`) and the re-pentest
+   `pentest_test.go` Attack 9 (`TestPentest_BoundConstruction_RecoveredKeyDoesNotTransfer`).
+
+   **Please attack:** a payload-*independent* content label (the `…Labeled` convenience path) leaves `pk*_C`
+   multi-purpose — is the binding obligation always met by every deployment path that releases a `wᵢ`? Can a
+   verifier be tricked into accepting a recovered `pk*` as the cohort key for a payload it was not derived
+   for (e.g. via opening/part-root manipulation, `ProvenanceVerifyF`)? Does any value derived from the
+   exposed `yᵢ`/`s1ᵢ` of a spent key leak across the PRF refresh boundary?
+
 ---
 
 ## 7. Reproduction
@@ -237,6 +275,9 @@ A reviewer would falsify a core claim by exhibiting any of:
 - a concurrent (ROS/Drijvers-style) forgery against the **interactive** variant under honestly-followed
   commit-reveal, or a demonstration that the deployed atomic model in fact exposes an interleaving surface;
 - a nonce-reuse / fault path that recovers `s1` without violating the stated one-time discipline;
+- a recovered-key (public-`wᵢ`) forgery that **transfers across messages** despite the message binding of
+  §6.7 — i.e. a `pk*_C` reconstructed for one signed payload that a verifier accepts as the cohort key for a
+  *different* payload (or any leakage that crosses the per-content PRF refresh boundary);
 - a parameter regime where the summed aggregate verifies but leaks the secret beyond ML-DSA's own leakage
   (breaking the "no assumption weaker than ML-DSA" claim);
 - a flaw in `masking_ok`'s application to the aggregate (the per-coefficient uniformity failing under the

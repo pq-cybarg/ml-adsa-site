@@ -678,6 +678,25 @@ independently without knowing each other's nonces"): they coordinate on the **pu
 commitments `wⱼ`, never on the private nonces `yⱼ` — and the freshness of each per-message key (not any
 hiding of `wⱼ`) is what makes that safe.
 
+**🔓 Why publishing the full `wᵢ` is safe (the central point).** In ML-ADSA we *deliberately* publish the
+full per-signer commitment `wᵢ = A·yᵢ` — single-key ML-DSA never does this (its verifier recomputes `w`). An
+observer **can** invert it: `A` is tall (`k ≥ ℓ`, full column rank), so `wᵢ = A·yᵢ` has a *unique* preimage
+and `yᵢ` is recovered by plain linear algebra (`ŷ = Â⁺ŵ` per NTT slot) — it is **not** Module-SIS-hidden.
+Together with the public `zᵢ = yᵢ + c*·s1ᵢ` that also hands the attacker that round's per-content secret key
+`s1ᵢ,C = c*⁻¹(zᵢ − yᵢ)`. **This is harmless**, and not because of generic HVZK hand-waving: each content uses
+a *fresh, independent* key **and** nonce, both PRF-derived from the master seed + the **message-bound**
+content label (`ContentKeyDerive`/`DeriveNonce`), and each such key is used **exactly once**. So the recovered
+material is a *spent, single-use* key for an **already-signed** message; an EUF-CMA forgery must target a
+**fresh** message `m*`, whose key is an independent PRF output the signer never used — never published, never
+exposed. Recovering a signed message's key reveals nothing toward any other message (the PRF refresh
+firewall). This is the core of the **F-C4 many-time** argument, machine-checked as a four-hop reduction —
+**transcript ≤ key-leak** (`transcript_le_keyleak`) → **PRF refresh** (`= adv_prf`) → **clean un-queried
+`Q`-target** → **lattice hardness** (`eq_exact` → MLWE + SelfTargetMSIS), giving
+`Pr[forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])`. The full table (published vs recoverable vs protected),
+the step-by-step four hops, and the message-binding fix that keeps `pk*_C` single-purpose are in **§6**
+("Why the nonce `y` must be secret *while in use*…" and "Machine-checked: the deployed (public-`wᵢ`)
+security").
+
 **🔒 Security.** The self-derived `c*` binds the **entire** commitment `W*`, which is exactly what defeats the
 Drijvers/ROS attack — giving concurrent security with **no ROS/AGM/OMDL assumption**
 (`unbiasable_challenge`, `challenge_adversary_independent`; paper §6.4). Determinism + the public,

@@ -18,10 +18,10 @@ carry secrets, and is every gate that touches them data-independent?"
 
 ```mermaid
 flowchart LR
-  s["SECRET — must never influence timing / branch / memory-access"]:::secret
-  p["PUBLIC — may be branched on freely"]:::public
-  d["DERIVED / HASH — public function of inputs"]:::derived
-  x["ABORT / REJECT — data-dependent control flow"]:::danger
+  s["<b>SECRET</b><br/>never influences<br/>timing · branch ·<br/>memory access"]:::secret
+  p["<b>PUBLIC</b><br/>may be branched<br/>on freely"]:::public
+  d["<b>DERIVED / HASH</b><br/>public function<br/>of inputs"]:::derived
+  x["<b>ABORT / REJECT</b><br/>data-dependent<br/>control flow"]:::danger
   s ~~~ p
   d ~~~ x
   classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
@@ -1021,7 +1021,146 @@ validation step, not yet run on hardware here.
 
 ---
 
-## 6. Traceability and reproduction
+## 6. The secrets-handling contract — public vs private, randomness, constant-time, zeroization
+
+This section leaves **nothing to guess**: for every value, whether it is public or private, whether it must
+be unpredictable, whether the code touching it must be constant-time, and whether its buffer must be
+zeroized. Read it before deploying.
+
+### The trust boundary at a glance
+
+```mermaid
+flowchart TB
+  subgraph PRIV["PRIVATE — never transmitted · constant-time · ZEROIZE after use"]
+    direction LR
+    p1["root seeds<br/>ξ · msk · regsk"]:::secret
+    p2["secret keys<br/>ρ′ · K · s1 · s2 · t0 · sk_C"]:::secret
+    p3["nonces<br/>y · yᵢ"]:::secret
+    p4["transients<br/>c·s1 · c·s2 · c·t0 · w · r0"]:::secret
+  end
+  subgraph PUBL["PUBLIC — safe to publish · branch freely · no zeroization"]
+    direction LR
+    u1["keys<br/>ρ · t1 · pk · pk*"]:::public
+    u2["signature parts<br/>c̃ · c · z · h · σ · σ*"]:::public
+    u3["ML-ADSA contributions<br/>tᵢ · wᵢ · zᵢ · t* · W* · z* · c*"]:::public
+    u4["derived public<br/>μ · tr · epoch root · registry · PoP"]:::derived
+  end
+  PRIV ==>|"one-way: derive public from private,<br/>NEVER the reverse"| PUBL
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+```
+
+### Classification table — ML-DSA
+
+Legend: **Class** = PUBLIC / PRIVATE; **Rand?** = must be unpredictable (sampled or PRF-derived);
+**CT?** = the code reading it must be constant-time; **Zero?** = the buffer must be zeroized after use.
+
+| Value | Lives in | Class | Rand? | CT? | Zero? |
+|---|---|---|:---:|:---:|:---:|
+| `ξ` — keygen seed (32 B) | transient | **PRIVATE** | **YES** (CSPRNG) | yes | **YES** |
+| `ρ` — matrix seed (32 B) | `pk`, `sk` | PUBLIC | no | no | no |
+| `ρ′` — secret seed (64 B) | `sk` | **PRIVATE** | derived | yes | **YES** |
+| `K` — signing seed (32 B) | `sk` | **PRIVATE** | derived | yes | **YES** |
+| `s1, s2` — secret vectors | `sk` | **PRIVATE** | derived | **YES** | **YES** |
+| `t1` — high bits of `t` | `pk`, `sk` | PUBLIC | no | no | no |
+| `t0` — low bits of `t` | `sk` | **PRIVATE** | derived | yes | **YES** |
+| `tr = H(pk)` (64 B) | `sk` (cache) | PUBLIC | no | no | no (recomputable) |
+| `μ = H(tr‖M′)` | transient | PUBLIC (derived) | no | no | no |
+| `y` — masking nonce | transient | **PRIVATE** | **YES** (one-time) | **YES** | **YES** |
+| `w = Ay`, `w1` — commitment | transient | **PRIVATE** ¹ | no | **YES** | **YES** |
+| `c̃` — challenge hash | `σ` | PUBLIC | no | no | no |
+| `c = SampleInBall(c̃)` | transient | PUBLIC | no | no | no |
+| `c·s1, c·s2, c·t0, r0` | transient | **PRIVATE** | no | **YES** | **YES** |
+| `z = y + c·s1` — response | `σ` | PUBLIC ² | no | (compute CT) | no |
+| `h` — hint | `σ` | PUBLIC | no | no | no |
+| `pk` | published | PUBLIC | no | no | no |
+| `sk` (whole) | stored | **PRIVATE** | — | yes | **YES** |
+| `σ = (c̃, z, h)` | published | PUBLIC | no | no | no |
+
+¹ In **ML-DSA**, `w`/`w1` are *internal* (never published) and depend on the secret `y`, so treat them as
+secret. In **ML-ADSA**, the per-signer `wᵢ` *is* published — that is HVZK-safe by design (it reveals nothing
+usable), which is why it moves to PUBLIC in the next table. ² `z` is **published only after** rejection
+sampling makes it independent of `s1` (perfect HVZK); its *computation* touches secrets and must be
+constant-time, but the released value is public and need not be hidden or zeroized.
+
+### Classification table — ML-ADSA additions
+
+| Value | Lives in | Class | Rand? | CT? | Zero? |
+|---|---|---|:---:|:---:|:---:|
+| `msk` — master seed (32 B) | signer | **PRIVATE** | **YES** (CSPRNG) | yes | **YES** |
+| `sk_C = (s1,s2,t)` per content | transient | **PRIVATE** | derived (PRF) | **YES** | **YES** |
+| `yᵢ = DeriveNonce(msk,C)` | transient | **PRIVATE** | **YES** (PRF, one-time) | **YES** | **YES** |
+| `regsk` — registration key | signer | **PRIVATE** | yes | yes | **YES** |
+| `tᵢ` — content key | epoch tree, pool | PUBLIC | no | no | no |
+| `wᵢ = A·yᵢ` — commitment | pool | PUBLIC | no | no | no |
+| `zᵢ` — response | broadcast | PUBLIC | no | no | no |
+| `t*, W*, z*` — sums | derivable | PUBLIC | no | no | no |
+| `pk* = (ρ, t1*)` | derivable | PUBLIC | no | no | no |
+| `c* = H(μ‖HighBits(W*))` | derivable | PUBLIC | no | no | no |
+| `σ* = (c̃*, z*, h*)` | published | PUBLIC | no | no | no |
+| epoch root, registry, PoP, `regpk` | published | PUBLIC | no | no | no |
+| one-time guard state (used-set) | durable store | not secret — **INTEGRITY-CRITICAL** | n/a | n/a | **must persist** |
+
+### Randomness — what must be unpredictable, and what must never repeat
+
+> **Only the root seeds are sampled.** Exactly the keygen seed `ξ` (ML-DSA) and the master seed `msk` (plus
+> `regsk`) come from a **CSPRNG**; everything else is *deterministically derived*. A weak/biased RNG here is a
+> full key compromise.
+>
+> **Nonces are deterministic but must stay unpredictable *and* one-time.** `y` / `yᵢ` are PRF outputs (not
+> fresh randomness), so they are reproducible by the secret holder — but they must be (a) unpredictable to an
+> attacker (PRF security) and (b) **never reused for a different message under the same key**. Two responses
+> sharing a nonce under two challenges give two linear equations in `s1` ⇒ **secret recovery**.
+>
+> **Public hashes are not secrets.** `c̃`, `c`, `μ` are fully determined and public; there is nothing random
+> to protect about them.
+
+### Constant-time — where it matters, and where it does **not**
+
+**Must be constant-time** (reads a PRIVATE value):
+
+- NTT / INTT / pointwise on `s1, s2, t0, y` and their NTT forms (`ŝ1, ŝ2, t̂0, ŷ`).
+- `modQ`, `cabs`, `Decompose`/`HighBits`/`LowBits`, `Power2Round` on secret-derived values.
+- the response `z = y + c·s1` and the hint inputs `−c·t0`; the secret-key sampler (`ExpandS` from `ρ′`).
+
+**Need not be constant-time** (public-only — branch and index freely):
+
+- **all of Verify** (it has no secret inputs at all);
+- `ExpandA` (public `ρ` → public `A`);
+- the **ML-ADSA combiner**: the summations `Σtᵢ/Σwᵢ/Σzᵢ`, `c*`, and the public hint identity `A·z* −
+  c*·t1*·2^d` (every input is public);
+- hashing / encoding / decoding of public `pk`, `σ`, `μ`, `c̃`.
+
+**Inherent residual (documented, not a bug):** the rejection-sampling **loop count** in single-signer Sign
+is data-dependent — universal to Fiat–Shamir-with-aborts. ML-ADSA's aggregate path removes it (deterministic
+nonce + abstain on a **public** sum). Full posture and the dudect screen: `docs/34 §2`.
+
+### Zeroization — wipe these buffers as soon as they are done
+
+**Zeroize:** `ξ` (immediately after deriving `ρ,ρ′,K`); `ρ′, K, s1, s2, t0, sk` when a key is unloaded;
+every per-signature transient — `y, ŝ1, ŝ2, t̂0, c·s1, c·s2, c·t0, w, r0, rhopp`; and (ML-ADSA) `msk, sk_C,
+yᵢ, regsk`.
+
+**Do not bother:** any PUBLIC value (`ρ, t1, tr, μ, c̃, c, z, h, σ, pk`, and every ML-ADSA contribution /
+sum) — publishing them is the whole point.
+
+> **Honest status.** Guaranteed wiping is hard in a garbage-collected language (Go may copy or retain
+> buffers), so the **reference implementation is a research/conformance artifact and does not guarantee
+> zeroization**. A production / hardened build must add explicit secure-wipe (and ideally locked, non-swapped
+> pages) for every "Zero? = YES" row above. This is called out as a deployment gap in `docs/34`.
+
+### The one-time rule — the single most important operational invariant
+
+> Because nonces are **deterministic**, a `(signer, content C)` pair must sign **at most once**. Violating
+> this leaks the secret key (see Randomness, above). It is enforced by `DurableOneTimeGuard` — an
+> append-only, `fsync`'d, **write-ahead** used-set, so a crash either records the use or releases no
+> signature, never both. The guard state is *not secret*, but it is **integrity- and durability-critical**:
+> losing or rolling it back re-enables nonce reuse.
+
+---
+
+## 7. Traceability and reproduction
 
 Each diagram maps a step to its **Go symbol** and its **proof artifact**; the full row-by-row matrix is the
 verification dossier (`docs/31`) and the implementation-conformance map (`docs/20`). Counts are the single

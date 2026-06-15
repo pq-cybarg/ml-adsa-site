@@ -733,6 +733,94 @@ deterministic PRF (constant work) and then the §2.2 signer path. The one-time g
 leak of deterministic signing (two responses under the same nonce ⇒ key recovery) — see
 [[deterministic-nonce-security]].
 
+### 3.4 The whole flow with 1, 2, 3, … N signers
+
+Two views of the *same* process across an `N`-signer cohort. The **temporal** view reads top-to-bottom as
+time; the **structural** view reads left-to-right as data flow. (Remember §3.2: this is non-interactive —
+commitments are deterministic and pre-published, each signer self-derives `c*`, and the summing party is
+passive. No one sends a challenge.)
+
+**Temporal — steps in time (each signer acts on its own; the pool is a passive medium):**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S1 as Signer 1
+  participant S2 as Signer 2
+  participant Sd as ⋯ signers 3 … N−1
+  participant SN as Signer N
+  participant B as Public pool · epoch key-tree
+  participant C as Any party · combiner
+  participant V as FIPS-204 verifier
+  Note over S1,SN: 1 · KeyGen / refresh — each signer independently
+  S1->>S1: ξ₁ → ρ₁ · ρ′₁ · K₁ → t₁ = A·s₁+s₂ → pk₁ sk₁
+  S2->>S2: ξ₂ → … → pk₂ sk₂
+  SN->>SN: ξ_N → … → pk_N sk_N
+  Note over S1,B: 2 · Deterministic commitments — pre-published in bulk
+  S1->>B: t₁ and w₁ = A·y₁   with y₁ = DeriveNonce
+  S2->>B: t₂ and w₂ = A·y₂
+  Sd->>B: ⋯ each i posts tᵢ and wᵢ
+  SN->>B: t_N and w_N = A·y_N
+  Note over S1,SN: 3 · Each signer SELF-derives the challenge — none is sent
+  B-->>S1: read all wⱼ
+  B-->>SN: read all wⱼ
+  S1->>S1: W* = Σ wⱼ → c* = H of μ ‖ HighBits W*
+  SN->>SN: same c* computed locally
+  Note over S1,B: 4 · Responses — one broadcast each
+  S1->>B: z₁ = y₁ + c*·s₁ of signer 1
+  S2->>B: z₂ = y₂ + c*·s₁ of signer 2
+  Sd->>B: ⋯ each i posts zᵢ
+  SN->>B: z_N = y_N + c*·s₁ of signer N
+  Note over B,V: 5 · Passive summation — any untrusted party
+  B-->>C: all tⱼ · wⱼ · zⱼ
+  C->>C: t* = Σ tⱼ → z* = Σ zⱼ → pk* = ρ ‖ Power2Round t*
+  C->>C: h* = MakeHint from public identity A·z* − c*·t1*·2^d
+  C->>V: σ* = c̃* ‖ z* ‖ h*
+  V-->>C: ACCEPT — one byte-exact ML-DSA signature under pk*
+```
+
+**Structural — all parties and steps at once (data flow left-to-right):**
+
+```mermaid
+flowchart LR
+  subgraph SIGNERS["N signers — each runs KeyGen → refresh → the §2 secret path, emitting PUBLIC (tᵢ, wᵢ, zᵢ)"]
+    direction TB
+    s1["Signer 1<br/>tᵢ=t₁, wᵢ=w₁, zᵢ=z₁"]:::public
+    s2["Signer 2<br/>t₂, w₂, z₂"]:::public
+    sd["⋮  signers 3 … N−1"]:::public
+    sN["Signer N<br/>t_N, w_N, z_N"]:::public
+  end
+  sumT["t* = Σᵢ tᵢ"]:::public
+  sumW["W* = Σᵢ wᵢ"]:::public
+  sumZ["z* = Σᵢ zᵢ"]:::public
+  pk["pk* = (ρ, Power2Round(t*).t1)"]:::public
+  ch["c* = SampleInBall( H(μ ‖ HighBits(W*)) )"]:::derived
+  hint["h* = MakeHint(−c*·t0*, A·z* − c*·t1*·2^d)"]:::derived
+  sig["σ* = (c̃*, z*, h*)  →  4627 B (-87)"]:::public
+  vf["unmodified FIPS-204 Verify(pk*, m, σ*) → ACCEPT"]:::public
+  s1 --> sumT & sumW & sumZ
+  s2 --> sumT & sumW & sumZ
+  sd --> sumT & sumW & sumZ
+  sN --> sumT & sumW & sumZ
+  sumT --> pk
+  sumW --> ch
+  ch --> hint
+  sumZ --> hint
+  sumZ --> sig
+  pk --> vf
+  ch --> sig
+  hint --> sig
+  sig --> vf
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+```
+
+Both views show the **constant-size** payoff: no matter how large `N` grows, the sums `t*, W*, z*` and the
+final `σ*` stay one ML-DSA-87 object (2592 B key, 4627 B signature) — the only `N`-dependent datum is the
+public participation bitmap. Each signer's secret work (the red path of §2.2) happens **locally** before it
+emits its public `(tᵢ, wᵢ, zᵢ)`; everything drawn here downstream of the broadcasts is public.
+
 ---
 
 ## 4. Security guarantees — the reduction chains

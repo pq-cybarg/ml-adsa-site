@@ -1204,12 +1204,24 @@ secret or any unused key relative to baseline ML-DSA-87.
 
 In single-key ML-DSA the commitment `w` is never published at all (the verifier recomputes it), a second
 line of defense. ML-ADSA *does* publish `wᵢ` to enable non-interactive aggregation; the per-message one-time
-refresh is precisely what keeps that publication safe. **Caveat:** this firewall requires the key/nonce to
-be bound to the **full message** (default `ConsensusAggregate`, content = the signing root, unique per
-slot/committee/**data**). A "predictable-label" variant (`ConsensusAggregateLabeled`) that keys the refresh
-by `(slot, committee)` *decoupled* from the data — for verifier pre-derivability of `pk*` — must bind the
-data into the key-derivation content (or otherwise handle the `wᵢ` leak), else recovering the per-label key
-would let one re-sign different data under the same label.
+refresh is precisely what keeps that publication safe. **The firewall requires the key/nonce to be bound to
+the full message** so that the recovered per-content key `pk*_C` is *single-purpose* (one message). The
+default `ConsensusAggregate` does this (content = the signing root, unique per slot/committee/**data**). A
+"predictable-label" convenience variant (`ConsensusAggregateLabeled`) that keys the refresh by
+`(slot, committee)` *decoupled* from the data would leave `pk*_C` multi-purpose — so the recovered key could
+re-sign *different* data under the same label.
+
+> **Shipped fix (closes internal pentest #3).** `go-mladsa/harden_binding.go` folds the message into the
+> content-key derivation itself — `MsgBoundContent(baseC, ctx, payload)` ⇒ `AggregateFBound` — so `pk*_C`
+> becomes a deterministic function of the message: `pk*(m₀) ≠ pk*(m₁)` under the same base label. A key
+> recovered for a spent payload is therefore **not** the cohort-expected key for any other payload, so the
+> cross-payload forgery never transfers. `BindingGuard` adds operational defense-in-depth (refuse a second,
+> *different* message under one label; idempotent on the same message). Tested in
+> `go-mladsa/harden_binding_test.go` (`TestBinding_ClosesRecoveredKeyForgery`,
+> `TestBindingGuard_RefusesSecondMessage`) and re-pentested with a full real-`SignP` attack in
+> `go-mladsa/pentest_test.go` (`TestPentest_BoundConstruction_RecoveredKeyDoesNotTransfer`). The guard alone
+> does *not* close #3 (the forgery uses *recovered* keys, not a fresh honest signature) — the **binding**
+> closes it; the guard hardens the honest path. See `docs/36` §6.7 for the full write-up.
 
 ### The commit→respond window — you can't be interrupted into a forgery
 
@@ -1329,6 +1341,44 @@ Everything in this section is now backed by mechanized proofs, not prose:
 - **Empirical corroboration, `go-mladsa/recover_nonce_test.go`.** On the *real* `ExpandA` matrix, `y` is
   recovered exactly from public `(A, w)` by `F_q` linear algebra (256/256 NTT slots) — confirming `A` is
   tall, so the leak is real and the refresh (not "hiding") is what carries the security.
+
+**What is published, what is recoverable from it, and what stays protected.** The whole safety argument is
+this one table — there is no "hidden `wᵢ`" claim:
+
+| Quantity | ML-DSA (single) | ML-ADSA (aggregate) | Recoverable by an observer? | Why it's safe |
+|---|---|---|---|---|
+| `wᵢ = A·yᵢ` (commitment) | **never published** (verifier recomputes) | **published** (needed for the shared `c*`) | — (it *is* the public value) | it is only a commitment |
+| `yᵢ` (nonce) | secret forever | secret *in-round*, **public-after** | **yes** — `ŷ = Â⁺ŵ`, tall `A`, *not* SIS-hidden | one-time; spent with the round |
+| `s1ᵢ,C` (this message's key) | secret forever | secret *in-round*, **public-after** | **yes** — `c*⁻¹(zᵢ − yᵢ)` once `zᵢ` is out | one-time, message-**bound** (`pk*_C` single-purpose) |
+| `s1ᵢ,C'` (any *other* message's key) | secret | **secret** | **no** — independent PRF output, never used ⇒ never published | the PRF refresh firewall |
+| `msk` (master seed) | secret | **secret** | **no** — preimage- + PRF-one-way | governs *all* future signatures |
+
+So the only thing the `wᵢ` publication ever surrenders is a **spent, single-use** key for an
+**already-signed** message. Everything that governs a *future* signature — `msk` and every not-yet-signed
+message's key — is exactly as protected as in baseline ML-DSA-87 (Module-LWE + the same SHAKE PRF).
+
+**The reduction in four hops (the deployed, transcript-exposing game → lattice hardness).** This is the
+explicit shape of `deployed_open_uncond`; each hop is a named, machine-checked step:
+
+1. **Transcript ≤ key-leak (`transcript_le_keyleak`).** Replace the real signing oracle — which returns the
+   full round transcript `(tᵢ, wᵢ, zᵢ, hᵢ)` — by one that simply *hands the adversary the entire one-time key*
+   for each queried message. Since `yᵢ` (hence `s1ᵢ,C`) is recoverable from the transcript anyway, this only
+   *helps* the adversary, so it can only *increase* the forgery probability: a `byequiv` upper bound, free.
+2. **Refresh hop (`open_refresh_hop` / `keyleak_refresh_hop` = `prf_security`).** Swap the PRF that derives
+   each per-message key for a truly random function. The cost is exactly `adv_prf`. Now every message's
+   one-time key is *independent*, so leaking the keys of *signed* messages reveals nothing about any other.
+3. **Reduce to a single un-queried target.** A successful EUF-CMA forgery is on a **fresh** `m*` never signed;
+   its key was never handed out (step 1) and is independent of all leaked keys (step 2). Guess which of the
+   `Q` random-oracle targets the forgery hits (factor `Q`); for that target the adversary has seen **nothing**
+   — its key/nonce are clean, exactly the single-message ML-DSA setting.
+4. **Lattice hardness (`eq_exact` → MLWE + SelfTargetMSIS / Module-SIS).** A verifying forgery against the
+   clean target *is* a SelfTargetMSIS witness (and the key's secrecy is Module-LWE). No new assumption.
+
+Composing: `Pr[deployed forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])` — the leak (step 1) is paid for by the
+refresh (step 2, `adv_prf`); the lattice hardness (step 4) lives entirely in the clean, un-queried target.
+The **message binding** above (closing #3) is what guarantees step 3's target is genuinely independent of the
+spent keys — without it, a recovered `pk*_C` would *be* a valid key for other messages, short-circuiting the
+"fresh `m*`" premise.
 
 ### Optional hardening: XMSS-style group-tree rotation (continuity)
 

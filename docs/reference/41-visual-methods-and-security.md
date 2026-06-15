@@ -1218,6 +1218,20 @@ already signed and never reused — and reaches **neither** thing that matters f
   `s1ᵢ,C` would require inverting both `ExpandS`/SHAKE (preimage-resistant) *and* the keyed PRF (one-way); and
   by PRF security, even **arbitrarily many** recovered one-time keys across many signed contents reveal
   nothing about `msk`.
+- **Exposing the nonce `yᵢ,C` does *not* expose `msk` either — including against a QROM adversary.** Recall
+  `yᵢ,C = ExpandMask(PRF(msk,"F.nonce",C))`, with `msk` the **absorbed key** of a SHAKE-256 sponge
+  (`SHAKE256("F.prf" ‖ msk ‖ "F.nonce" ‖ C‖idx)`). So a recovered `yᵢ,C` is simply a **PRF output** — exactly
+  the view the PRF security game *already* grants the adversary (outputs on adaptively chosen inputs reveal
+  nothing about the key). Quantitatively this is the **same `adv_prf`** of the refresh hop: in the ideal world
+  after that hop, nonces are independent random and `msk` does not appear, so `Pr[recover msk] ≤ adv_prf`,
+  whether or not `y` is published. In the **QROM** the hop is RO-free, so `adv_prf` is the *quantum* PRF
+  advantage; modeling SHAKE as a quantum RO makes msk-recovery generic quantum search over a **256-bit** key
+  (≈ `2¹²⁸`, Grover). Three structural points seal it: SHAKE/Keccak is sponge-based so there is **no
+  length-extension**; the two PRF uses of `msk` are **domain-separated** (`F.key` vs `F.nonce`,
+  length-prefixed) so there is no related-input leverage; and `yᵢ,C` is a **lossy** reduction of the stream
+  (`u mod (2σ+1) − σ`), so the attacker sees strictly *less* than the raw PRF output. The lone dependency is
+  that SHAKE-256 is a quantum-secure PRF (assumption **A4**) — the *same* SHAKE ML-DSA already trusts for its
+  own nonce/key derivation; no new assumption.
 - **Every other / future content's key is untouched.** `s1ᵢ,C'` for `C' ≠ C` is an *independent* PRF output;
   it was never used, so its `(w, z)` were never published, so it is never exposed — and it is uncorrelated
   with `s1ᵢ,C` (the no-leakage tests measure this empirically: cross-content `max|corr| ≈` the noise floor).

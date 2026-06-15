@@ -1379,13 +1379,16 @@ message's key — is exactly as protected as in baseline ML-DSA-87 (Module-LWE +
 **The reduction in four hops (the deployed, transcript-exposing game → lattice hardness).** This is the
 explicit shape of `deployed_open_uncond`; each hop is a named, machine-checked step:
 
-1. **Transcript ≤ key-leak (`transcript_le_keyleak`).** Replace the real signing oracle — which returns the
-   full round transcript `(tᵢ, wᵢ, zᵢ, hᵢ)` — by one that simply *hands the adversary the entire one-time key*
-   for each queried message. Since `yᵢ` (hence `s1ᵢ,C`) is recoverable from the transcript anyway, this only
-   *helps* the adversary, so it can only *increase* the forgery probability: a `byequiv` upper bound, free.
-2. **Refresh hop (`open_refresh_hop` / `keyleak_refresh_hop` = `prf_security`).** Swap the PRF that derives
-   each per-message key for a truly random function. The cost is exactly `adv_prf`. Now every message's
-   one-time key is *independent*, so leaking the keys of *signed* messages reveals nothing about any other.
+1. **Transcript ≤ key-leak (`transcript_le_keyleak`) — perfect simulation, cost 0.** Replace the real signing
+   oracle — which returns the full round transcript `(tᵢ, wᵢ, zᵢ, hᵢ)` — by one that simply *hands the
+   adversary the entire one-time key* for each queried message. Since `yᵢ` (hence `s1ᵢ,C`) is recoverable from
+   the transcript anyway, the key-leak oracle is at least as strong, so the forgery probability can only
+   *increase*. Mechanized as a `byequiv` step: **no advantage term, zero cost** — it strictly hands the
+   adversary more, then we bound *that*.
+2. **Refresh hop (`open_refresh_hop` / `keyleak_refresh_hop` = `prf_security`) — the first and only
+   advantage term before the lattice step.** Swap the PRF that derives each per-message key for a truly random
+   function. The cost is exactly `adv_prf`. Now every message's one-time key is *independent*, so leaking the
+   keys of *signed* messages reveals nothing about any other.
 3. **Reduce to a single un-queried target.** A successful EUF-CMA forgery is on a **fresh** `m*` never signed;
    its key was never handed out (step 1) and is independent of all leaked keys (step 2). Guess which of the
    `Q` random-oracle targets the forgery hits (factor `Q`); for that target the adversary has seen **nothing**

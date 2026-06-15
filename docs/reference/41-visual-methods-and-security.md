@@ -1404,6 +1404,23 @@ explicit shape of `deployed_open_uncond`; each hop is a named, machine-checked s
 4. **Lattice hardness (`eq_exact` → MLWE + SelfTargetMSIS / Module-SIS).** A verifying forgery against the
    clean target *is* a SelfTargetMSIS witness (and the key's secrecy is Module-LWE). No new assumption.
 
+**Proof status — every hop is already mechanized or standard (none is a TODO).** Hops 1, 2, 4 are
+machine-checked in `formal/ml_adsa_F_open.ec`, which compiles green in `formal/check-all.sh` (it is in the
+classical array) and is genuineness-probed in `formal/genuineness.sh`:
+
+| Hop | Lemma / artifact | Form | Cost | Status |
+|---|---|---|---|---|
+| 1 — transcript ≤ key-leak | `transcript_le_keyleak` | `byequiv` (perfect simulation) | **0** | **proven** — genuineness probe: weakening its query-list correspondence (`DforgeOpen.qs{1}=DforgeKey.qs{2}` → `true`) *breaks* the proof |
+| 2 — PRF refresh | `open_refresh_hop` = `prf_security` | reduction | `adv_prf` | **proven** — probe: `≤ adv_prf` → `≤ 0` breaks it |
+| 3 — clean `Q`-target | guessing + union bound | standard | factor `Q` | standard argument (no per-scheme lemma needed) |
+| 4 — lattice hardness | `eq_exact` → `ml_adsa_euf` / `ml_adsa_qrom` | reduction | assumption | **proven** (the ML-DSA keystones) |
+
+The capstone `deployed_open_uncond` *composes* these. **QROM:** the refresh hop is RO-free, so Hops 1–3 are
+identical in the QROM; only Hop 4's `eps_content` swaps to `adv_mlwe + Pr[QROM-STMSIS]`
+(`ml_adsa_qrom.qrom_eufcma_uncond`). So Hop 1 is **not** an outstanding obligation — it is a compiled,
+genuineness-checked `byequiv` already in CI; a reviewer reading only this site sees the prose, while the
+`.ec` source lives in the formal corpus (`formal/`).
+
 Composing: `Pr[deployed forge] ≤ adv_prf + Q·(adv_mlwe + Pr[STMSIS])` — the leak (step 1) is paid for by the
 refresh (step 2, `adv_prf`); the lattice hardness (step 4) lives entirely in the clean, un-queried target.
 The **message binding** above (closing #3) is what guarantees step 3's target is genuinely independent of the

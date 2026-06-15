@@ -18,14 +18,16 @@ carry secrets, and is every gate that touches them data-independent?"
 
 ```mermaid
 flowchart LR
-  s["SECRET — must never influence timing/branch/memory-access"]:::secret
+  s["SECRET — must never influence timing / branch / memory-access"]:::secret
   p["PUBLIC — may be branched on freely"]:::public
   d["DERIVED / HASH — public function of inputs"]:::derived
-  x["ABORT / REJECT branch (data-dependent control flow)"]:::danger
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
+  x["ABORT / REJECT — data-dependent control flow"]:::danger
+  s ~~~ p
+  d ~~~ x
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
 ```
 
 - **Red = secret.** The whole constant-time argument is: every operation on a red wire is straight-line
@@ -34,6 +36,9 @@ flowchart LR
 - **Blue = derived/hash.** A deterministic public function (SHAKE, encode, NTT of a public value).
 - **Amber = a data-dependent branch** — flagged explicitly so the residual control-flow surface is visible
   rather than hidden.
+
+The class is carried by a **colored border + a translucent tint**, and the box/text colors follow the page
+theme — so the diagrams stay legible in both light and dark mode (and on GitHub).
 
 Each diagram is followed by **🔒 Security** (what makes the step sound) and **🛡 Side-channel** (how the step
 avoids leaking), with pointers to the Go symbol and the proof artifact.
@@ -58,8 +63,8 @@ flowchart LR
   a --> na --> pw
   b --> nb --> pw
   pw --> inv --> out
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 The NTT itself is a fixed network of **Cooley–Tukey butterflies** — the control flow (which indices pair
@@ -74,9 +79,9 @@ flowchart TD
   in["input coeffs"]:::secret --> L --> out["NTT-domain coeffs"]:::secret
   note["loop bounds & index pairs fixed by n=256 only → DATA-INDEPENDENT"]:::public
   L -.-> note
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
 ```
 
 **🔒 Security.** The NTT is a *ring isomorphism* — multiplication via NTT is exact (`NTT(p·q)=NTT(p)⊙NTT(q)`,
@@ -119,9 +124,9 @@ flowchart TD
   pr --> sk
   Kk --> sk
   rhop --> sk
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 **🔒 Security.** `t = A·s1 + s2` is a **Module-LWE sample**: recovering `(s1,s2)` from `(A,t)` is the MLWE
@@ -168,10 +173,10 @@ flowchart TD
   chkh -- yes --> bump
   chkh -- no --> out
   bump --> y
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
 ```
 
 **🔒 Security.** The accepted `z = y + c·s1` is **perfectly masked**: conditioned on acceptance it is uniform
@@ -213,9 +218,9 @@ flowchart TD
   mu --> ctp --> eq
   eq -- no --> no
   eq -- yes --> ok
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
 ```
 
 **🔒 Security.** Verify recomputes the challenge from `w'₁` and checks it matches `c̃`. A forgery requires a
@@ -240,7 +245,7 @@ flowchart LR
     mla["z* = Σ zᵢ,  t* = Σ tᵢ,  W* = Σ wᵢ   (homomorphic SUM)"]:::public
   end
   BLS -. "same algebra, different group" .-> MLADSA
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
 ```
 
 Aggregation is literally **addition in `R_q`**. The summed key `t* = Σ tᵢ` is itself a bona-fide ML-DSA key
@@ -287,9 +292,9 @@ flowchart TD
   end
   pool --> read
   bcast --> sum
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 **On "two rounds."** There *is* a logical data dependency — `c*` depends on `W* = Σ w_j`, so commitments
@@ -336,9 +341,9 @@ flowchart TD
   L1 --> L0
   skc --> root --> L2 --> L0
   reg --> L3 --> L0
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 - **L1 (many-time).** Distinct contents `C` give independent keys (PRF security), so aggregating across many
@@ -373,9 +378,9 @@ flowchart LR
   H3["Hop E: a verifying forgery IS a<br/>SelfTargetMSIS solution (extract_sound)"]:::derived
   G["Adv ≤ adv_mlwe + Adv^{SelfTargetMSIS}"]:::public
   F --> H1 --> H2 --> H3 --> G
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
 ```
 
 Machine-checked, admit-free: `msufcma_uncond` (`ml_adsa_euf.ec`). **SUF-CMA** adds the same-`(μ,c)`-new-`(z,h)`
@@ -394,8 +399,8 @@ flowchart TD
   qb --> qbt
   qat --> eqc
   qbt --> eqc
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 `qrom_eufcma_uncond` (A, tight), `qrom_eufcma_lossy` + `ml_adsa_qrom_ghhm.ec` (B, derived bound),
@@ -421,8 +426,8 @@ flowchart LR
   msis --> su
   prf --> mt
   crh --> nq
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 These are **exactly ML-DSA's own assumptions** — ML-ADSA adds no new hardness assumption.
@@ -457,9 +462,9 @@ flowchart TD
   m2 --> ok
   m3 --> ok
   m4 --> ok
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
 ```
 
 Every red→blue edge is an operation on a secret, and every blue node is **branchless / data-independent**.
@@ -477,8 +482,8 @@ flowchart LR
     g3["u − (mask & (2³²−Q))     // Montgomery canonicalize"]:::derived
   end
   BAD -. "replaced by" .-> GOOD
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 > Honest note: Go's compiler often lowers a naive `if r<0 { r+=Q }` to a branchless `cmov` anyway — which is
@@ -497,8 +502,8 @@ flowchart TD
   p4["reductions branchless (modQ / Montgomery)"]:::derived
   proof["machine-checked: ct_correct, forest_loop_correct,<br/>jloop_eq, jloop_forest (docs/31, docs/34 §2a)"]:::derived
   claim --> p1 & p2 & p3 & p4 --> proof
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 This is stronger than "we wrote it carefully": the iterative loop the code runs is *proved equal* to the
@@ -519,9 +524,9 @@ flowchart LR
   src --> d --> verdict
   src --> x --> verdict
   src --> a --> verdict
-  classDef secret fill:#ffe0e0,stroke:#c0392b,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
+  classDef secret fill:#e74c3c30,stroke:#e74c3c,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
 ```
 
 ### 5.5 Constant-time checklist (decision view)
@@ -545,9 +550,9 @@ flowchart TD
   q2 -- no --> q3
   q3 -- yes --> fix3 --> ct
   q3 -- no --> ct
-  classDef danger fill:#fff3cd,stroke:#b9770e,color:#000;
-  classDef public fill:#e6f5e6,stroke:#1e8449,color:#000;
-  classDef derived fill:#e3edff,stroke:#2471a3,color:#000;
+  classDef danger fill:#f39c1230,stroke:#f39c12,stroke-width:2px;
+  classDef public fill:#2ecc7130,stroke:#2ecc71,stroke-width:2px;
+  classDef derived fill:#3498db30,stroke:#3498db,stroke-width:2px;
 ```
 
 **Honest residual.** The one inherently data-dependent element is the **rejection-loop attempt count** in

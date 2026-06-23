@@ -103,24 +103,31 @@ invoke the NTT.
 
 | Prover | Where | Count | Result |
 |---|---|---|---|
-| EasyCrypt (classical) | opam switch `discus-verified` | 23 files | green |
+| EasyCrypt (classical) | opam switch `discus-verified` | 33 files | green |
 | EasyCrypt (QROM / EasyPQC) | opam switch `easypqc`, via `ec-quantum.sh` | 5 files | green |
 | Coq / Rocq (`nsatz` over R) | system | 5 files | green |
-| **Total prover artifacts** | `formal/check-all.sh` | **32** | **ALL GREEN** |
+| **Total prover artifacts** | `formal/check-all.sh` | **43** | **ALL GREEN** |
 | Gobra (ETH, Docker) | `formal/gobra/` | 6 theorems | green |
-| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **50** | 53/53 |
+| Genuineness (weaken-axiom → proof breaks) | `formal/genuineness.sh` | **53** | 53/53 |
 
-Lemma tally: **222 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 254 machine-checked**, plus 6
-Gobra code-level theorems. (Artifact *file* count is 32; lemma count is 200 — both framings are used in
-the literature; do not conflate them. All figures are produced by `formal/count-artifacts.sh`, the single
-source of truth.)
+Lemma tally: **242 admit-free EasyCrypt lemmas + 32 Coq lemmas/theorems = 274 machine-checked**, plus 6
+Gobra code-level theorems. (Prover-artifact *file* count is 43 = 33 classical EC + 5 quantum EC + 5 Coq;
+the lemma count and the artifact count are distinct framings — do not conflate them. All figures are
+produced by `formal/count-artifacts.sh`, the single source of truth.)
 
 > **Discrepancy note.** Earlier prose used a deprecated lemma tally of "77 (= 72 EC + 5 Coq)", which
 > conflated *5 Coq files* with *5 Coq lemmas* (Coq has 32 lemmas/theorems) and predated the masking /
 > rounding / NTT / NTT-inversion / GHHM additions; older docs also quote stale artifact counts (23, 24).
-> The authoritative current numbers are those of `formal/count-artifacts.sh`: **38 artifacts**
-> (28 classical + 5 quantum + 5 Coq) and **254 lemmas** (222 EC + 32 Coq), with `genuineness.sh` at 53/53.
-> The cross-consistency audit `docs/35` reconciles every document to these.
+> The authoritative current numbers are those of `formal/count-artifacts.sh`: **43 artifacts**
+> (33 classical + 5 quantum + 5 Coq) and **273 lemmas** (241 EC + 32 Coq), with `genuineness.sh` at 53/53.
+> (The +5 artifacts / +19 EC lemmas over the prior 38/254 are: `ml_adsa_F_offset.ec` (F-OFFSET nonce-hiding,
+> row 25/§3a); `ml_adsa_F_keyonly.ec` (deployed EUF σ-INDEPENDENT — key-leak target is masking_ok-free, #122);
+> `ml_adsa_F_smallsigma.ec` + `ml_adsa_F_hintmlwe.ec` (tighter-model small-σ EUF: PROVEN backbone + the KLSS
+> Hint-MLWE reduction, #123); `ml_adsa_F_rootsafe.ec` (ROOT/base-wallet key safe across UNLIMITED aggregation
+> cycles, #129).) These underpin: the σ=3β deployment default (8× ceiling lift, no EUF cost; docs/49), the
+> tightness-adjusted classical/quantum split (docs/50: 252c/229q core-SVP = 267c/217q gate-count), the leakage
+> register (docs/51), the MitM/replay lockdown (docs/53), and the key-leak elimination + live-round safety
+> mandate (docs/54). The cross-consistency audit `docs/35` reconciles every document to these.
 
 ---
 
@@ -155,6 +162,46 @@ classical, ECq = EasyCrypt QROM, Coq = Coq/Rocq, Gob = Gobra.
 | 22 | Rounding/hint decomposition correctness (FIPS-204 §2.4) | `Power2Round`/`Decompose`/`UseHint` | `ml_adsa_rounding.ec : decompose_reconstruct`, `power2round_correct`, `usehint_makehint` — EC (DERIVED) | off-by-one genuineness check |
 | 23 | NTT convolution theorem (evaluation ring homomorphism) | `NTT`/`INTT` fast multiply | `ml_adsa_ntt.ec : peval_mul`, `ntt_mul_nth` (and `peval_add`/`ntt_add_nth`) — EC (DERIVED from `polyME`) | `exact peval_mul` genuineness check |
 | 24 | NTT inversion (CRT / DFT round-trip, `INTT∘NTT = id`) | `INTT` | `ml_adsa_ntt_inv.ec : dft_inv` (via `orth` orthogonality + `geo` geometric sum) — EC (DERIVED) | root-primitivity genuineness check |
+| 25 | **F-OFFSET nonce-hiding instantiation** (offset/RLWE-phase; docs/47) | `AggregateOffsetF`, `OffsetCombine`, `OffsetChallenge`, `ForwardSecretRatchet` (`construction_offset.go`, `forward_secret_ratchet.go`) | `ml_adsa_F_offset.ec` — EC (DERIVED, 6 lemmas: `noise_flood_reduction` ≥native; `chooseF_reproduces`/`offset_combine_correct_fips` over the real `Ml_adsa_rounding` high-bits; `offset_combine_proc` the full combine while-loop) | `construction_offset{,_scale,_provenance,_e2e,_kat}_test.go`, `forward_secret_ratchet_test.go`; KAT digest `6b465b72…`; `estimator99.py` + Sage `lattice-estimator` |
+| 26 | **Deployed EUF is σ-INDEPENDENT** (key-leak target is masking_ok-free; #122, docs/49) | deployed transcript-exposing game (`ml_adsa_F_open`) | `ml_adsa_F_keyonly.ec` — EC (3 lemmas: `konly_uncond` no-message target = adv_mlwe+STMSIS w/o masking_ok; `konly_eq_mlweL`; `deployed_target_is_keyonly`) | `construction_offset_sigma_independence_test.go` (σ=3β byte-exact, 8× ceiling) |
+| 27 | **Tighter-model small-σ EUF** (non-key-leak): proven backbone + KLSS Hint-MLWE reduction (#123, docs/48 §9–§10) | `MSUFCMA` gap | `ml_adsa_F_smallsigma.ec` (`msufcma_lossy` PROVEN backbone; Route A/B named) + `ml_adsa_F_hintmlwe.ec` (gap = Hint-MLWE adv PROVEN by byequiv `real_eq`/`ideal_eq`; `msufcma_hintmlwe`; QROM-RO-free corollary) | `smallsigma_floor.py` (Route A dead 44β, Route B 0.5β); Sage hint@3β=387 |
+| 28 | **Root/base-wallet key safe across UNLIMITED aggregation cycles** (#129, docs/51, docs/54) | refresh ratchet under worst-case key-leak | `ml_adsa_F_rootsafe.ec` — EC (`root_le_greal`, `root_key_safety_rel` MACHINE-CHECKED via `prf_security`, Q-INDEPENDENT; `root_key_safety`; `ideal_root_blind` named entropy primitive) | `recover_nonce_test.go` (full-w leaks), `construction_offset_noleak_test.go` (F-OFFSET eliminates, 1792/1792) |
+| 29 | **Tightness-adjusted security + MitM/replay + key-leak elimination** (#131/#134/#135) | deployment hardening | (analysis + tests) | `tightness_adjust.py` (252c/229q core-SVP, 267c/217q gate-count); `construction_offset_{mitm_replay,noleak,onetime,hierarchy}_test.go`; docs/50–54 |
+
+---
+
+## 3a. F-OFFSET nonce-hiding instantiation — assurance surface
+
+F-OFFSET (full spec: `docs/47`; verified-claims ledger: `docs/46`) is a *separate* instantiation that hides the
+per-signer nonce during combination while remaining a byte-exact ML-DSA-87 aggregate. It does not modify the
+proven base (`construction_f.go`/`decentralized.go`). Each signer broadcasts `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)`
+with a fresh secret offset `rᵢ ~ U(±R)` instead of the full `wᵢ`; the combiner forms the challenge over the
+noised-carry estimate `w1*` and builds the hint to target it. Assurance, by surface:
+
+**Security (≥ native ML-DSA — req G).** Recovering `s1ᵢ` from `(hiᵢ, qᵢ, zᵢ)` is the LWE instance
+`b = M·s1 + e` (`M = A·c`, `e = −rᵢ`). Five independent confirmations (ledger F8–F10, I5, F6):
+- **Reduction (attack-independent):** the offset instance is the native one with *extra* fresh noise, so it is
+  ≥ native against *any* attack (`noise_flood_reduction`, EC).
+- **Real lattice-estimator (Sage, full suite usvp/bdd/dual/dual_hybrid/hybrid):** native 267 vs offset **455 @R=2¹¹
+  / 489 @R=2¹²** bits; best attack `dual_hybrid` for both. Aggregate `s1*`: 367 / 867 / 938.
+- **Exact-instance model-pin (Go):** the deployed view reduces *exactly* to `b = M·s1 − r`, noise scale exactly R
+  (no hidden amplification).
+- **Coverage caveat (verified):** the win requires *fresh, independent* offset noise (deterministic quantization,
+  #82, does not qualify — ledger I6).
+
+**Correctness (byte-exact accept).** `useHint` is exactly ±1 on ≤ω coords (Go, F6); the combiner's choice rule
+reproduces the committed `w1*` (`chooseF_reproduces`, EC, over the real `Ml_adsa_rounding` high-bits), and the
+full combine loop is Hoare-verified (`offset_combine_proc`, EC: `ok ⇒` every coord bridged). End-to-end, the
+unmodified FIPS-204 verifier accepts (`TestConstructionOffset_EndToEnd`, `TestAggregateOffsetF_EndToEnd`).
+
+**Engineering.** Deployable envelope (F12): n ∈ {2..32}, R ∈ {2⁶..2¹⁰}, hint-weight ≤ ω (flat in n), ≤1 retry
+avg. Forward-secret keying (`ForwardSecretRatchet`, #101). Provenance (`ProvenanceVerifyOffset`). Deterministic
+KAT lock (F16, digest `6b465b72…`).
+
+**Honest residuals (shared posture with the base scheme).** The EC port abstracts the q-ring arithmetic
+(`Ms`/`addn`/noise distributions, as in `mlwe_hop`) and `usehint`'s mod-m / q−1 boundary (rounding-model level);
+the absolute estimator numbers use the tool's gate-count model (the *relative* ≥-native claim is reduction-backed
+and calibration-robust). Integration into the live QRL P2P/consensus layer is future work.
 
 ---
 
@@ -237,9 +284,9 @@ processes with real go-qrllib verification (no mocks, no string-print fakes):
 ## 7. How to reproduce (commands)
 
 ```
-# Algorithm proofs (38 artifacts): EasyCrypt classical+QROM + Coq
-cd formal && zsh check-all.sh                 # → ALL GREEN (28 classical + 5 quantum + 5 Coq = 36)
-zsh count-artifacts.sh                         # → 38 artifacts, 254 lemmas (222 EC + 32 Coq), 53/53, 6 Gobra
+# Algorithm proofs (43 artifacts): EasyCrypt classical+QROM + Coq
+cd formal && zsh check-all.sh                 # → ALL GREEN (33 classical + 5 quantum + 5 Coq = 43)
+zsh count-artifacts.sh                         # → 43 artifacts, 274 lemmas (242 EC + 32 Coq), 53/53, 6 Gobra
 zsh genuineness.sh                            # → 53/53 (weaken axiom ⇒ proof breaks)
 # Code-level structural proofs (Gobra, Docker)
 cd formal/gobra && zsh run.sh                 # → 6 theorems, "Gobra found 0 errors"; zsh genuineness.sh → 5/5

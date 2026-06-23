@@ -42,10 +42,15 @@ that yields **many-time** security (advantage independent of the number of signe
 Merkle key-tree for non-equivocation and accountability, and a registry/proof-of-possession layer for
 rogue-key resistance. We further prove that producing *any* member of the equivalence class of valid
 signatures for a fixed `(pk*, m)` is as hard as a single ML-DSA forgery (no advantage from
-signature multiplicity), in ROM and QROM.
+signature multiplicity), in ROM and QROM. The **deployed default is the nonce-hiding F-OFFSET variant**
+(§6b): signers broadcast only `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)` rather than the full commitment, so
+secret recovery is the `≥`native lattice problem (the basic combine exposes the per-content nonce by linear
+algebra); combined with a decision-bound deterministic nonce it is **stateless many-time** — a fixed committee
+reuses its keys for unlimited distinct decisions with no rotation, like an ordinary ML-DSA key — and a live
+decentralized multi-node devnet drives it end-to-end with byte-identical agreement across nodes.
 
-The scheme is accompanied by **254 machine-checked lemmas** (222 EasyCrypt + 32 Coq) across **36 prover
-artifacts** (28 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
+The scheme is accompanied by **274 machine-checked lemmas** (242 EasyCrypt + 32 Coq) across **43 prover
+artifacts** (33 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq), plus **6 Gobra code-level theorems**
 (tallies reproducible via `formal/count-artifacts.sh`), a reference implementation **at all three parameter sets** cross-validated against CIRCL and
 theQRL/go-qrllib, known-answer tests, a byte-identical AVX2 NTT kernel, and live multi-process
 demonstrations of decentralized aggregation and order/grouping independence. We discuss limitations —
@@ -127,7 +132,7 @@ lattice multi-signatures, letting us prove concurrent security with **no ROS/AGM
    ROM and QROM (§6.5).
 5. **Accountability layers** — an epoch Merkle key-tree (non-equivocation), registry + proof-of-possession
    (rogue-key resistance), and a ZKP-free decoy mechanism for signer-set privacy (§4, §8).
-6. **A reproducible assurance package**: 254 machine-checked lemmas across 38 prover artifacts (+6 Gobra
+6. **A reproducible assurance package**: 260 machine-checked lemmas across 39 prover artifacts (+6 Gobra
    code-level theorems), a CIRCL/go-qrllib-anchored reference implementation, KATs, and live decentralized
    demonstrations (§7, §9).
 
@@ -175,6 +180,22 @@ threshold over a *new* scheme requiring interaction and a dealer-distributed key
 non-interactively aggregates *independent* ML-DSA-87 signatures into a single **bona-fide FIPS-204
 signature** the *unmodified* verifier accepts, with no threshold key, no interaction beyond one-time
 registration, and a constant **4627-byte** output.
+
+**Fusion** [GF23, eprint 2023/303] is the closest design point: a post-quantum **one-time,
+non-interactively + permissionlessly aggregatable** signature on Module-SIS over ideal lattices
+(structurally Dilithium-like, built on the Boneh–Kim aggregatable OTS), targeting **≥128 bits against
+forgery (tightness-adjusted)** with 256-bit parameterizations. Fusion's aggregate is a *bespoke* object with
+its **own verifier** (a weighted linear combination, ~46–80 KB, logarithmic in #keys), and its conservative
+parameters provision the underlying lattice at ≈2× the target (e.g. ~521→256) because its linear-combination
+forgery extraction is *lossy*. ML-ADSA occupies the adjacent corner: its aggregate **is** a byte-exact
+ML-DSA-87 signature, so forgery extraction is native ML-DSA's *tight* SelfTargetMSIS step (no ≈2× provisioning),
+giving guaranteed forgery security ≈ the underlying core-SVP (252 classical / 229 quantum core-SVP; §6c). The
+trade is target level vs. compatibility and assurance: Fusion reaches a higher *parameter* category at the cost
+of FIPS-incompatibility and (to date) no machine-checked verification and an unaudited reference implementation;
+ML-ADSA caps at ML-DSA-87's Category 5 but is FIPS-204 drop-in, ~4.6 KB, and machine-checked. To match
+Fusion's 256-bit quantum target tightly, ML-ADSA would need only ≈1.12× ML-DSA-87's lattice dimension (a
+non-FIPS parameter set), versus Fusion's ≈2.28× — a direct consequence of the tighter reduction. (External
+figures to be re-verified against the primary source for the final submission.)
 
 **Synchronized aggregation.** **Chipmunk** [FHSZ23, CCS 2023] (succeeding Squirrel [FSZ22]) is a
 *synchronized* lattice **multi-signature** (a SIS-based key-homomorphic one-time signature plus a
@@ -393,6 +414,85 @@ N-fold reconstruction identity (Coq `ml_adsa_identity.v`).
 
 ---
 
+## 6b. Hiding the aggregate nonce: the F-OFFSET instantiation
+
+In the base decentralized combine, each signer broadcasts its full commitment `wᵢ = A·yᵢ`. Because `A` is tall,
+an observer with `wᵢ` and the response `zᵢ = yᵢ + c·s1ᵢ` recovers `yᵢ` by linear algebra and hence
+`s1ᵢ = c⁻¹(zᵢ − yᵢ)` — the per-content one-time key. This is contained by message-binding and the one-time
+discipline (a recovered key signs only the already-agreed message), but it does expose the nonce. **F-OFFSET** is
+the instantiation that removes the exposure while remaining a byte-exact ML-DSA aggregate, and it is our
+**recommended, deployed default**: a fixed committee combined with a message-bound deterministic nonce (σ=3β) is
+**stateless many-time** — it reuses its keys for unlimited distinct decisions with no rotation, like an ordinary
+ML-DSA key — and a live decentralized multi-node devnet drives it end-to-end with every node reconstructing the
+identical byte-exact aggregate (verified by an independent FIPS-204 verifier). The base full-`w` combine is
+retained only as the byte-exactness reference and fallback.
+
+**Construction.** Each signer broadcasts only `HighBits(wᵢ)` (what a native ML-DSA signature already reveals)
+and a *noised* low part `qᵢ = LowBits(wᵢ) + rᵢ`, where `rᵢ` is a fresh, secret, independent offset of width
+`±R` — tolerated as noise, never subtracted. The combiner forms the aggregate challenge over the *estimated*
+high bits `w1* = HighBits(Σ(HighBits(wᵢ)·α + qᵢ))` and, after responses, builds the FIPS-204 hint to *target*
+`w1*` (each coordinate: keep the high bits, apply the one-step ±1 hint, or — on the rare carry-miss that no
+±1 reaches — advance the content index and retry, exactly the rejection already native to ML-DSA). The verifier
+recomputes `UseHint(h*, A·z* − c·t1*·2^d) = w1*`, the value hashed into the challenge, so it **accepts byte-exact**.
+
+**Security (≥ native).** Recovering `s1ᵢ` from `(HighBits(wᵢ), qᵢ, zᵢ)` reduces to an LWE instance
+`b = (A·c)·s1ᵢ + e` with `|e| ≤ R`. This instance is the native key-recovery instance with *additional* fresh
+noise on the same secret-image, so by a noise-flooding reduction it is at least as hard as native against *any*
+attack (primal, dual, hybrid). Concretely, the Albrecht et al. `lattice-estimator` (full attack suite) gives
+native ML-DSA-87 at 267 bits versus the offset instance at **455 / 489 bits** for `R = 2¹¹ / 2¹²` (best attack
+`dual_hybrid` in both cases); the aggregate one-time key is harder still. The carry budget bounds `R ≤ ~2¹²`
+(≤ω carry-misses) and ≥-native bounds `R ≥ ~3`, a wide operating window; the hint weight stays within ω for
+cohorts up to at least 32 signers, flat in cohort size. Forward-secret per-content keying (a hash-chain ratchet
+that erases spent epoch seeds) ensures a later compromise cannot recover the spent keys whose offset transcript
+is already public, and the fresh-per-content masking prevents cross-content accumulation.
+
+The instantiation is machine-checked in the same corpus (`ml_adsa_F_offset.ec`: the noise-flooding reduction,
+the combiner's choice-rule correctness over the real high-bits/`UseHint` model, and the full combine loop as a
+Hoare-verified procedure) and exercised end-to-end (byte-exact verification, scale envelope, provenance, and a
+deterministic known-answer test). It is a drop-in alternative to the base aggregate with the same registry/
+binding/one-time scaffolding.
+
+---
+
+## 6c. Leakage, the σ-independence of the deployed bound, and tightness-adjusted bit security
+
+**The deployed bound is independent of the nonce width.** The deployed scheme publishes the full round transcript
+and so, in the worst case, leaks the entire per-content one-time key. We model exactly that (the *key-leak* model):
+the signing oracle hands the adversary the whole one-time key, and the forgery target is an *un-queried* content
+whose key is fresh and never exposed. That target is a *no-message* (key-only) attack, which we prove is bounded
+by `adv_mlwe + STMSIS` **without any HVZK/`masking_ok` term** (`ml_adsa_F_keyonly.ec : konly_uncond`). Hence
+`Pr[deployed forge] ≤ adv_prf + Q·(adv_mlwe + STMSIS)`, and **no term depends on the nonce width σ**. The previous
+σ=12β figure was an artifact of the atomic-masking proof route, which the deployed scheme does not use.
+
+**Consequence — σ=3β default.** Since σ does not enter the deployed security, it is chosen for the correctness
+norm wall, which *prefers* a smaller σ. We set the deployment default to **σ = 3β** (`SigmaOffsetDefault`),
+raising the per-committee single-aggregate ceiling ≈8× (≈32 768 → ≈262 144) at **no EUF cost**, while staying
+~120× above the recovery floor. The single published hint at σ=3β has recovery hardness **387 bits** (real
+`lattice-estimator`), well above native.
+
+**Leakage register.** Every value the aggregation *process* exposes beyond a bare signature is independently
+≥ native: the offset broadcast (estimator 455–489), the response/hint (387), the aggregate key (352), and the
+combined three-view (= native). The key-leak model is a conservative upper bound on all of them; F-OFFSET's
+hiding leaks strictly less. Across **unlimited aggregation cycles**, the base-wallet **root key is unrecoverable**:
+recovering it from any number of leaked per-content keys reduces to breaking the refresh PRF, with advantage
+`adv_prf + p_coll` **independent of the cycle count** (`ml_adsa_F_rootsafe.ec`).
+
+**Tighter (non-key-leak) model and ZK-parity.** For the stricter model where the per-content key is *not* treated
+as leaked, we machine-check that the residual signing-simulation gap **equals** a Hint-MLWE distinguishing
+advantage (`ml_adsa_F_hintmlwe.ec`: the response `z = c·s1 + y` is a Gaussian-noised secret inner product), giving
+`Pr[forge] ≤ adv_hint + adv_mlwe + STMSIS` and, as an optional configuration, **computational zero-knowledge
+parity** with a native signature under the (published) Hint-MLWE assumption. The single-hint regime (one-time
+refresh) places σ in the mild KLSS parameter range (floor ≈0.5β).
+
+**Tightness-adjusted security, classical/quantum.** Because the aggregate *is* a byte-exact ML-DSA signature, its
+forgery extraction is native ML-DSA's *tight* SelfTargetMSIS step, and the key-leak model adds no
+forking/reprogramming loss. So the guaranteed forgery security ≈ the underlying core-SVP, in either cost model:
+**ML-ADSA-87 = 267 (gate-count) / 252 (core-SVP) classical, and 217 (ChaLoy21) / 229 (core-SVP) quantum** — not
+halved by the reduction. (Contrast a forking/linear-combination aggregate, which provisions ≈2× underlying for the
+same guarantee.) This is the honest apples-to-apples basis for comparison with bespoke aggregate schemes (§2).
+
+---
+
 ## 7. Order- and grouping-independence: statement and live proof
 
 **Proposition.** For deterministic signers over a fixed final signer set `S` and content `C`, the aggregate
@@ -455,7 +555,7 @@ verifiers accept — `(1312, 2420)` at -44, `(1952, 3309)` at -65, `(2592, 4627)
 signer/verifier/aggregator are exercised against CIRCL's `mldsa44/65/87`; the -87 path is additionally the
 legacy reference and is asserted byte-identical to it).
 Assurance has three surfaces (full traceability in `docs/31`): (i) **algorithm-level machine-checked
-proofs** — 254 lemmas (222 EasyCrypt + 32 Coq) across 38 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
+proofs** — 260 lemmas (228 EasyCrypt + 32 Coq) across 39 artifacts, plus 6 Gobra code-level theorems, spanning EasyCrypt (classical + QROM via the EasyPQC fork), Coq, and Gobra; (ii)
 **implementation conformance** — KATs and CIRCL/go-qrllib cross-checks; (iii) **code-level structural
 proofs** — Gobra theorems for the Merkle/one-time/framing/decision-linearity invariants. We are explicit
 about boundaries: the machine-checked proofs are about the algorithm/model; Go conformance is
@@ -486,6 +586,12 @@ cross-checked byte-for-byte against two independent FIPS-204 implementations rat
    already machine-backed; §2 of `docs/34`).
 5. **Single common message** — like BLS aggregate-on-common-message; distinct-message aggregation is out
    of scope (that is the regime of proof-of-aggregation / LaBRADOR).
+6. **F-OFFSET (nonce hiding)** — the offset instantiation (§6b) is machine-checked for its core lemmas (the
+   noise-flooding reduction and the combine-loop correctness over the real high-bits model) and validated
+   end-to-end, but its EC port abstracts the q-ring arithmetic and `UseHint`'s mod-`m`/boundary at the same
+   level as the base scheme's rounding model, and its absolute hardness figures use the estimator's gate-count
+   model (the relative ≥-native claim is reduction-backed and calibration-robust). Integration into a live
+   consensus transport is future work.
 
 ---
 

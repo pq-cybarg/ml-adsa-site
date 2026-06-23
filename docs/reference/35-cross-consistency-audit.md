@@ -16,8 +16,8 @@ Compiled 2026-06-11.
 artifact set is defined) plus the source files. Current output:
 
 ```
-Prover artifacts : 35   (28 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
-Machine-checked lemmas : 244   (222 EasyCrypt + 32 Coq)
+Prover artifacts : 43   (33 classical EasyCrypt + 5 quantum EasyPQC + 5 Coq/Rocq)
+Machine-checked lemmas : 274   (242 EasyCrypt + 32 Coq)
 Genuineness checks : 53/53
 Gobra theorems : 6   (5/5 Gobra genuineness)
 ```
@@ -49,7 +49,7 @@ rounding / NTT / NTT-inversion / GHHM additions.
 
 ## 3. Findings & remediation ledger
 
-### 3.1 Stale / contradictory counts (canonical-current = 38 artifacts / 254 lemmas / 53 genuineness / 6 Gobra)
+### 3.1 Stale / contradictory counts (canonical-current = 43 artifacts / 274 lemmas / 53 genuineness / 6 Gobra)
 
 > The per-line `→` targets below record the reconciliations *as performed at the 29/134/33 snapshot*; the
 > authoritative current figures are 36 / 244 / 50 / 6 (see §1 and `formal/count-artifacts.sh`). Later passes
@@ -137,7 +137,7 @@ adversarially fact-checked against the source text; see the notes under the tabl
 | Per-signer key/state | small | **large secret-key tree state** (seed-derivable, top layers cached); **public key small (~1 KB)** | small ML-DSA key (pk 2592 B) |
 | Participants | threshold `t` up to ~**1024** | benchmarked to 8192 signers; bounded #time-slots (2^τ) | committee `N` up to deployment cap (qrysm: 128) |
 | Assumptions | "standard lattice": **Hint-MLWE + SelfTargetMSIS** (Hint-MLWE → MLWE) + PRF | **(ring-)SIS + ROM** (Ajtai hash; CR ⇐ SIS) | **MLWE + SelfTargetMSIS (+Module-SIS)** — identical to ML-DSA |
-| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **254 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
+| Formal verification | paper proofs (static/selective corruption) | paper proofs (ROM) | **274 machine-checked lemmas** (EasyCrypt+Coq) + 6 Gobra |
 | Key distinction | jointly *produces* one signature under a shared key (threshold) | aggregates many **same-message** sigs valid at one slot (synchronized) | aggregates **independent** signatures into a key/scheme the existing verifier already accepts |
 
 **Source-check notes (corrections applied after literature review).** (a) Venue is **EUROCRYPT 2024**,
@@ -165,7 +165,7 @@ commitment), which is also what gives ROS-resistance with **no AGM/OMDL**.
 
 All findings in §3 discharged:
 
-- **Source of truth** locked: `formal/count-artifacts.sh` → **38 artifacts / 254 lemmas (222 EC + 32 Coq) /
+- **Source of truth** locked: `formal/count-artifacts.sh` → **43 artifacts / 274 lemmas (242 EC + 32 Coq) /
   36-36** genuineness / 6 Gobra. Successive passes (§6): count-audit 29/134/33 → proof-closure 29/137/34 →
   encoding-conformance 30/153/35 (`ml_adsa_montgomery.ec`) → CT-transcription 31/200/36
   (`ml_adsa_ntt_ct.ec`). Re-verified: `check-all.sh` ALL GREEN, `go-mladsa` builds.

@@ -14,6 +14,9 @@ concurrency:
 # deprecated/being removed for security); applies to every job and step below.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Suppress Material's advisory banner about a future/hostile "MkDocs 2.0" (we are pinned to the
+  # supported MkDocs 1.6.x + Material 9.7.x line; there is no usable 2.0 to upgrade to). Official gate.
+  NO_MKDOCS_2_WARNING: "true"
 jobs:
   build:
     runs-on: ubuntu-latest

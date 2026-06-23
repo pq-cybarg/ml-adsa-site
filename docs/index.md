@@ -11,6 +11,15 @@ uses is public, so any party reconstructs the identical aggregate.
 
 [Read the paper](reference/paper.md){ .md-button .md-button--primary } [Download the paper (PDF)](reference/ml-adsa.pdf){ .md-button }
 
+!!! tip "Deployed default — F-OFFSET (state of the art)"
+    The recommended construction is the nonce-hiding, message-bound, **σ=3β** instantiation **F-OFFSET**:
+    signers broadcast only `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)`, so recovering a secret is the **≥native** lattice
+    problem, and a fixed committee is **stateless many-time** — it reuses its keys for unlimited distinct
+    decisions with no rotation, like an ordinary ML-DSA key — while every aggregate stays **byte-exact**
+    ML-DSA-87. A live decentralized multi-node devnet drives it end-to-end (every node reconstructs the
+    identical aggregate, verified by an independent FIPS-204 verifier).
+    See **[F-OFFSET deployed default + live devnet](reference/59-offset-default-deployment-and-live-devnet.md)**.
+
 ---
 
 ## The idea in one line
@@ -37,8 +46,8 @@ sample), so security reduces — in **both the ROM and the QROM** — to the *sa
 
 | | |
 |---|---|
-| **Prover artifacts** | **38** — 28 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
-| **Machine-checked lemmas** | **254** (222 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
+| **Prover artifacts** | **43** — 33 classical EasyCrypt + 5 quantum (EasyPQC) + 5 Coq/Rocq, all green |
+| **Machine-checked lemmas** | **274** (242 EasyCrypt + 32 Coq) + **6** Gobra code-level theorems |
 | **Genuineness** | **53/53** — each proof's named primitive is weakened and the proof confirmed to break |
 | **Implementation** | reference impl at **all three parameter sets** (ML-ADSA-44/65/87, NIST Cat 2/3/5) byte-anchored to **CIRCL** and **theQRL/go-qrllib** FIPS-204 verifiers; KATs + ACVP-shaped vectors; byte-identical **AVX2 NTT** kernel |
 

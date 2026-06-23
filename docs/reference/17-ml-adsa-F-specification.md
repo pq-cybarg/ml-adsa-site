@@ -6,6 +6,14 @@ high-assurance scheme specification: normative algorithms, security model with e
 targets, the machine-checked formal-verification plan, wire formats, threat model, key lifecycle,
 abuse cases, standards alignment, conformance/validation, and an honest limitations register.
 
+> **Deployment note.** The base combine specified here broadcasts the full commitment `wᵢ`, which exposes the
+> per-content nonce by linear algebra (finding #3). The **deployed default** is the nonce-hiding instantiation
+> **F-OFFSET** (broadcast `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)`; ≥native; stateless many-time at σ=3β), specified in
+> [docs/47](47-construction-f-offset.md) and declared the state-of-the-art deployment in
+> [docs/59](59-offset-default-deployment-and-live-devnet.md). Everything in this spec (registry, epoch key-tree,
+> part-root binding, decision modes, provenance, one-time/refresh lifecycle) applies unchanged to F-OFFSET; only
+> the per-signer broadcast and the challenge's high-bits estimate differ.
+
 **Document status:** specification / design-for-verification. Claims are labeled **[proven]**,
 **[measured]**, **[computed]**, **[structural]**, **[cited]**, **[target]** (formal-verification
 goal, not yet discharged), **[open]** (research-grade obligation). Requirements use RFC 2119

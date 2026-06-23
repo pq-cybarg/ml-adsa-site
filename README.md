@@ -13,7 +13,12 @@ documentation; it is a defensive publication and independent cryptanalysis is in
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-mkdocs serve
+NO_MKDOCS_2_WARNING=true mkdocs serve     # the env var silences Material's "MkDocs 2.0" advisory banner
 ```
 
 Pushing to `main` builds and deploys via GitHub Actions (`.github/workflows/deploy.yml`).
+
+> **Tooling note.** Pinned to **mkdocs 1.6.1 + mkdocs-material 9.7.6** (the latest supported line on PyPI —
+> there is no usable MkDocs/Material 2.0 to upgrade to). The build prints a Material advisory *against* a
+> future/hostile "MkDocs 2.0" that would remove the plugin system Material depends on; we suppress it with the
+> official `NO_MKDOCS_2_WARNING=true` env var (set in CI; prepend it to local `mkdocs` commands as above).

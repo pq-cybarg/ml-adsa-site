@@ -109,3 +109,21 @@ nav:
     - Cryptanalysis solicitation: reference/39-cryptanalysis-solicitation.md
     - Parameter sets (Cat 2/3/5): reference/40-parameter-sets.md
     - Visual walkthrough (methods & security): reference/41-visual-methods-and-security.md
+    - Confining nonce exposure: reference/42-confining-nonce-exposure.md
+    - Aggregate-nonce-hiding catalog: reference/43-aggregate-nonce-hiding-catalog.md
+    - Offset route & lattice estimate: reference/44-offset-route-and-lattice-estimate.md
+    - Necessity audit (locked requirements): reference/45-necessity-audit.md
+    - Findings ledger: reference/46-findings-ledger.md
+    - 'F-OFFSET — nonce-hiding construction (deployed default)': reference/47-construction-f-offset.md
+    - Offset EUF (small σ): reference/48-offset-euf-small-sigma.md
+    - σ=3β deployment security: reference/49-sigma3beta-deployment-security.md
+    - Tightness-adjusted security vs Fusion: reference/50-tightness-adjusted-security-vs-fusion.md
+    - Leakage → bit-security register: reference/51-leakage-to-bit-security.md
+    - Aggregate-of-aggregates & mixed: reference/52-aggregate-of-aggregates-and-mixed.md
+    - MitM / replay lockdown: reference/53-mitm-replay-lockdown.md
+    - Key-leak elimination & live-round safety: reference/54-key-leak-elimination-and-live-round-safety.md
+    - Message-bound nonce (few-time): reference/55-message-bound-nonce-few-time.md
+    - Toward stateless many-time: reference/56-toward-stateless-many-time.md
+    - Large-cohort safety & noise-flooding soundness: reference/57-large-cohort-safety-and-noise-flooding-soundness.md
+    - Validation dossier (regression / scale / pentest): reference/58-validation-regression-scale-pentest.md
+    - 'F-OFFSET deployed default + live devnet (state of the art)': reference/59-offset-default-deployment-and-live-devnet.md

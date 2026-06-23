@@ -1052,6 +1052,45 @@ validation step, not yet run on hardware here.
 
 ---
 
+## 5b. Aggregation leakage, σ-independence, and key-leak elimination (deployment hardening)
+
+This section maps the *information* leakage of the aggregation process (distinct from the side-channel/timing
+leakage of §5) to bit security, and records the deployment hardening added for QRL. Full detail: docs/49–54.
+
+```mermaid
+flowchart TD
+  subgraph LEAK["What the aggregation process publishes (beyond a bare ML-DSA sig)"]
+    O["offset (HighBits w, q=LowBits w + r)"]
+    Z["response z = c·s1 + y"]
+    PK["aggregate key pk* = Σ tᵢ"]
+  end
+  O -->|"recover s1 = LWE b=M·s1+e"| H1["≥ native (est. 455–489)"]
+  Z -->|"single-hint recovery"| H2["≥ native (est. 387, Sage)"]
+  PK -->|"aggregate MLWE"| H3["≥ native (est. 352)"]
+  H1 & H2 & H3 --> KL["Key-leak model = conservative UPPER bound on all of it (ml_adsa_F_open)"]
+  KL --> FRESH["per-content forgery target is FRESH ⇒ native (ml_adsa_F_keyonly: σ-INDEPENDENT)"]
+  KL --> ROOT["root/base-wallet key safe across UNLIMITED cycles (ml_adsa_F_rootsafe, Q-independent)"]
+  FRESH --> OUT["bit security = ML-DSA-87: 267c/217q gate-count (252c/229q core-SVP)"]
+  ROOT --> OUT
+```
+
+**Key points.**
+- **σ-independent deployed bound** (`ml_adsa_F_keyonly.ec`): the nonce width does not enter security ⇒ deployment
+  default **σ=3β** raises the per-committee ceiling ≈8× at no EUF cost (docs/49).
+- **Single-use key-leak ELIMINATED by F-OFFSET** (the QRL-critical property): full-w leaks the one-time key by
+  plain linear algebra (`recover_nonce_test.go`), F-OFFSET corrupts that recovery on **1792/1792** nonce coords
+  (`construction_offset_noleak_test.go`) ⇒ extracting the live key is Cat-5-hard. A thief cannot grab the key
+  during an unfinalized round (docs/54).
+- **One-time is from the deterministic nonce, NOT from single-use leakage** — proved distinct: a *second* use under
+  the same nonce still leaks (`construction_offset_onetime_test.go`, 256/256), independent of F-OFFSET hiding.
+- **MitM/replay** closed at the scheme level (`bindMsg` + `ctx` + challenge-binding + one-time guard + PoP +
+  self-computed challenge), 7/7 tamper mutations rejected (docs/53); residuals are universal app-layer
+  (WYSIWYS, anti-DoS, unique decision id).
+- **Tightness-adjusted, apples-to-apples vs Fusion** (docs/50): ML-ADSA's aggregate IS a byte-exact ML-DSA sig ⇒
+  tight native SelfTargetMSIS extraction (no forking/HVZK loss) ⇒ guaranteed ≈ underlying; Fusion provisions ≈2×.
+
+---
+
 ## 6. The secrets-handling contract — public vs private, randomness, constant-time, zeroization
 
 This section leaves **nothing to guess**: for every value, whether it is public or private, whether it must
@@ -1488,7 +1527,7 @@ PRF-derived, so there is no key-material exhaustion.
 
 Each diagram maps a step to its **Go symbol** and its **proof artifact**; the full row-by-row matrix is the
 verification dossier (`docs/31`) and the implementation-conformance map (`docs/20`). Counts are the single
-source of truth from `formal/count-artifacts.sh` (**38 artifacts / 254 lemmas / 53 genuineness / 6 Gobra**).
+source of truth from `formal/count-artifacts.sh` (**43 artifacts / 274 lemmas / 53 genuineness / 6 Gobra**).
 
 ```
 # regenerate the proof tallies these diagrams reference

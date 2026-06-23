@@ -250,6 +250,51 @@ not new cryptography. The deep technical write-up is `docs/29`; the live demos a
 
 ---
 
+## 8c. Hiding the nonce — the **F-OFFSET** variant (our deployed default)
+
+Recall from §2 that each signature has a fresh random **mask** `y` and reveals a response `z = y + c·s`.
+In the basic combine, each signer also broadcasts its full **commitment** `w = A·y` so everyone can compute
+the shared challenge. That is convenient — but it turns out to leak: because the matrix `A` is "tall," anyone
+who sees both `w` and `z` can do schoolbook linear algebra to recover `y`, and then the secret
+`s = (z − y)/c`. ML-DSA itself never hands out `w`, so the basic combine reveals *more* than a normal
+signature would. For a blockchain that is unacceptable: a thief who scrapes the gossip could reconstruct a
+live key before the block is final.
+
+**The fix is a magician's misdirection.** Instead of publishing `w`, each signer publishes only:
+
+- the **top digits** of `w` (`HighBits(w)`) — exactly what an ordinary ML-DSA signature already shows, plus
+- the **bottom digits with a fresh, secret random number `r` added on top** (`LowBits(w) + r`).
+
+The little random `r` (a few hundred at most) is never revealed and never subtracted — it just rides along as
+noise. Now an attacker no longer has clean equations: recovering the secret means *solving a lattice problem
+with unknown noise*, which is the **same kind of problem that protects ML-DSA in the first place**. We ran the
+standard public lattice-hardness calculator (the Albrecht et al. estimator) on it: the hidden form is **at
+least as hard as native ML-DSA-87** — concretely well above the ~252-bit security floor, with margin to spare.
+The combiner still reconstructs the *top digits of the sum* (a couple of digits occasionally land one tick off
+a rounding boundary, which the standard ML-DSA "hint" mechanism already knows how to nudge by ±1), so the final
+object is **still a byte-for-byte ordinary ML-DSA-87 signature** — the chain's unmodified verifier accepts it,
+and so does QRL's own signature library.
+
+**The surprise bonus: you stop needing one-time keys.** The leak was the whole reason the basic scheme had to
+treat each key as single-use (reuse a mask with two different challenges and the same linear algebra recovers
+the secret). Once the mask is hidden *and* we derive it deterministically from the **decision being signed**
+(so two different decisions automatically get two different masks), a fixed committee can **reuse its keys for
+unlimited different decisions, with no key rotation at all** — exactly like an ordinary ML-DSA key, which is
+what everyone expected a signature to do in the first place. We tested this directly: one fixed committee
+signed **hundreds of distinct decisions**, every output a valid, unique aggregate, with no rotation and no
+single-use bookkeeping. The scheme even scales to absurd sizes — we combined **131,072 signers** into one
+4,627-byte signature.
+
+**We ran it live.** A multi-node decentralized devnet (8 independent node processes, the same `cmd/mladsa-devnet`
+from §8b, with `OFFSET=1`) drives this hidden-nonce variant end to end: across many slots, **every node
+independently rebuilds the exact same byte-for-byte aggregate**, both our verifier and QRL's native verifier
+accept all of them, and built-in cheaters (fake keys, equivocators) are excluded automatically without
+changing the result. This nonce-hiding, decision-bound, reusable variant — called **F-OFFSET** — is our
+**recommended, deployed default**. (Technical details: `docs/47`, `docs/49`, and `docs/59`; the basic full-`w`
+combine described earlier is kept only as the reference that proves the math is byte-exact.)
+
+---
+
 ## 9. What "we proved it" actually means
 
 Cryptographers distinguish three strengths of evidence. We are explicit about which is which:
@@ -258,7 +303,7 @@ Cryptographers distinguish three strengths of evidence. We are explicit about wh
 - **Measured** — we ran real code and an *independent* verifier accepted the output.
 - **Assumed** — a standard, named hardness assumption (everyone in the field relies on these).
 
-For Construction F: **36 machine-checked prover artifacts** (all passing — 244 lemmas across EasyCrypt,
+For Construction F: **43 machine-checked prover artifacts** (all passing — 274 lemmas across EasyCrypt,
 EasyPQC, and Rocq, plus 6 Gobra code-level theorems) **+** independent-verifier (CIRCL) measurements
 **+** a small, standard assumption set. Concretely, we machine-checked:
 

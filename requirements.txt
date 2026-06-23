@@ -1,2 +1,9 @@
-mkdocs-material>=9.5
+# Pinned to the latest known-good, reproducible build set (2026-06).
+# NOTE: there is NO MkDocs 2.0 / Material 2.0 on PyPI — the latest published releases are
+# mkdocs 1.6.1 and mkdocs-material 9.7.6. The build-time "MkDocs 2.0" banner is the Material
+# team's advisory AGAINST a future/hostile MkDocs 2.0 that would remove the plugin system Material
+# depends on (no migration path; unsuitable for production). We pin to the supported line and
+# suppress that advisory via NO_MKDOCS_2_WARNING=true (set in CI; see README for local builds).
+mkdocs==1.6.1
+mkdocs-material==9.7.6
 pymdown-extensions>=10.7

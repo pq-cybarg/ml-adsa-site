@@ -672,17 +672,31 @@ must exist before responses (this is the Fiat–Shamir binding, and exactly why 
 pre-publication**, not by an interactive exchange: no signer waits on a message *from* another signer or
 *from* a coordinator, and no challenge is ever transmitted. The earlier framing of this as an
 aggregator-driven "round 1 / round 2" would describe the interactive MuSig design that ML-ADSA explicitly is
-**not** (see [[ml-adsa-noninteractive]]). The deeper question — *how* each signer derives the shared `c*` and
+**not** (ML-ADSA is non-interactive by construction, not a 2-round MuSig handshake). The deeper question — *how* each signer derives the shared `c*` and
 responds without ever knowing another signer's nonce — is answered in **§6** ("Why signers can aggregate
 independently without knowing each other's nonces"): they coordinate on the **public, per-message one-time**
 commitments `wⱼ`, never on the private nonces `yⱼ` — and the freshness of each per-message key (not any
 hiding of `wⱼ`) is what makes that safe.
 
-While this design is what enables non-interactivity, it *requires* publishing the full `wᵢ`. The next
-paragraph explains why that is safe — despite the fact that an observer can recover the nonce and the
-per-content key from it — thanks to the one-time PRF refresh.
+The diagram above is the **reference (base) combine**, which publishes the full `wᵢ`. It is what proves the
+math is byte-exact, but it is **not the deployed default** — see the callout below.
 
-**🔓 Why publishing the full `wᵢ` is safe (the central point).** In ML-ADSA we *deliberately* publish the
+> **🟢 Deployed default — F-OFFSET (nonce-hiding).** The reference combine publishes the full `wᵢ`, from which
+> an observer can recover the nonce by linear algebra (next paragraph). The **deployed default broadcasts the
+> hiding form instead**: only `HighBits(wᵢ)` (what a native ML-DSA signature already reveals) and a
+> **noise-masked** low half `qᵢ = LowBits(wᵢ) + rᵢ` (`rᵢ` a fresh secret offset, bounded `|rᵢ|≤R`). The full
+> `wᵢ` is **never published**; the cohort challenge is taken over the *estimated* high bits
+> `w1* = HighBits(Σ(hiᵢ·α + qᵢ))`. Recovering the private nonce/key from `(hiᵢ, qᵢ, zᵢ)` is then a **Module-LWE**
+> instance the lattice-estimator rates **≥ native ML-DSA-87** — i.e. **computational** privacy (under MLWE),
+> *not* perfect secrecy; the bounded offset leaves a small, quantified statistical leak kept ≤ what a native
+> ML-DSA signature already leaks. So the deployed default reveals **no more about any secret than one native
+> ML-DSA-87 signature**, while keeping every other property below. The output is still byte-exact. See §5b and
+> docs/47, docs/49, docs/59. The full-`wᵢ` explanation that follows is therefore about the **reference path**
+> (and why it is *also* safe, via the one-time refresh firewall) — the deployed default avoids the exposure
+> at the source.
+
+**🔓 Why even the reference path's full `wᵢ` is safe (the refresh firewall).** In the *reference* combine we
+*deliberately* publish the
 full per-signer commitment `wᵢ = A·yᵢ` — single-key ML-DSA never does this (its verifier recomputes `w`). An
 observer **can** invert it: `A` is tall (`k ≥ ℓ`, full column rank), so `wᵢ = A·yᵢ` has a *unique* preimage
 and `yᵢ` is recovered by plain linear algebra (`ŷ = Â⁺ŵ` per NTT slot) — it is **not** Module-SIS-hidden.
@@ -761,8 +775,8 @@ flowchart TD
 
 **🛡 Side-channel.** `msk` and the refreshed `sk_C`/nonce are the only long-lived secrets; they feed the
 deterministic PRF (constant work) and then the §2.2 signer path. The one-time guard prevents the *one* fatal
-leak of deterministic signing (two responses under the same nonce ⇒ key recovery) — see
-[[deterministic-nonce-security]].
+leak of deterministic signing (two responses under the same nonce ⇒ key recovery) — see the deterministic-nonce
+safety analysis in §6 and `formal/ml_adsa_F_nonce.ec`.
 
 ### 3.4 The whole flow with 1, 2, 3, … N signers
 
@@ -1175,7 +1189,9 @@ constant-time, but the released value is public and need not be hidden or zeroiz
 | `sk_C = (s1,s2,t0)` per content | transient | **1-TIME** ¹ | **YES** (PRF) | **YES** | yes (until published) |
 | `yᵢ = DeriveNonce(msk,C)` | transient | **1-TIME** ¹ | **YES** (PRF, one-time) | **YES** | yes (until published) |
 | `tᵢ` — content key | epoch tree, pool | PUBLIC | no | no | no |
-| `wᵢ = A·yᵢ` — commitment | pool | PUBLIC | no | no | no |
+| `wᵢ = A·yᵢ` — commitment | pool | **reference path: PUBLIC; deployed default (F-OFFSET): NOT published** | no | no | yes (F-OFFSET: until the hiding form is derived) |
+| `rᵢ` — F-OFFSET offset (`\|rᵢ\|≤R`) | transient | **1-TIME PRIVATE** (deployed default) | **YES** (fresh) | yes | **YES** |
+| `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)` — F-OFFSET hiding broadcast | broadcast | PUBLIC (recover `yᵢ`/`s1` = ≥native Module-LWE) | no | no | no |
 | `zᵢ` — response | broadcast | PUBLIC | no | no | no |
 | `t*, W*, z*` — sums | derivable | PUBLIC | no | no | no |
 | `pk* = (ρ, t1*)` | derivable | PUBLIC | no | no | no |
@@ -1184,7 +1200,13 @@ constant-time, but the released value is public and need not be hidden or zeroiz
 | epoch root, registry, PoP, `regpk` | published | PUBLIC | no | no | no |
 | one-time guard state (used-set) | durable store | not secret — **INTEGRITY-CRITICAL** | n/a | n/a | **must persist** |
 
-¹ **"1-TIME" is a third tier between PRIVATE and PUBLIC, and the distinction is load-bearing.** Because
+¹ **"1-TIME" is a third tier between PRIVATE and PUBLIC, and the distinction is load-bearing.** This tier is
+described for the **reference path**, where ML-ADSA publishes `wᵢ`. **In the deployed default (F-OFFSET), `wᵢ`
+is never published** — only the hiding form `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)` — so `yᵢ`/`sk_C` are *not* handed
+out at round end; recovering them is the ≥native Module-LWE problem (computational privacy, not perfect). The
+worst-case "becomes effectively public" wording below is therefore the **reference path**; the deployed default
+is strictly more conservative, and the one-time discipline still applies regardless (it guards nonce *reuse*,
+independent of `wᵢ`-hiding). In the reference path: because
 ML-ADSA publishes `wᵢ`, a per-content one-time value is **secret only while the round is in progress** and
 becomes **effectively public once content `C` is signed**: `A` is tall, so `wᵢ = A·yᵢ` reveals `yᵢ`, and then
 `zᵢ` reveals `s1_C` (and `tᵢ` reveals `s2_C`, `t0_C`). So `yᵢ`/`sk_C` are **not** permanently private the way
@@ -1212,11 +1234,18 @@ is private…" above for the forgery analysis — and note its title is, strictl
 
 ### Why the nonce `y` must be secret *while in use* — and why publishing `wᵢ = A·yᵢ` afterward is safe
 
-The nonce blinds the signing key during a round, so its handling deserves a precise statement. Note up front
-(this is the corrected framing): in ML-ADSA `y` is **not permanently private** — publishing `wᵢ = A·yᵢ` makes
-it recoverable, so it is a **one-time ephemeral**: secret *while the round is live*, effectively *public
-afterward*. What must be protected is its **secrecy during the round** and its **one-time use**, not its
-secrecy forever.
+The nonce blinds the signing key during a round, so its handling deserves a precise statement. This subsection
+analyzes the **reference (base) combine**, which publishes the full `wᵢ`; in that path, `y` is **not
+permanently private** — publishing `wᵢ = A·yᵢ` makes it recoverable, so it is a **one-time ephemeral**: secret
+*while the round is live*, effectively *public afterward*. What must be protected is its **secrecy during the
+round** and its **one-time use**, not its secrecy forever.
+
+> **In the deployed default (F-OFFSET), `wᵢ` is never published**, so the nonce is *not* handed out at all:
+> recovering it from the broadcast `(HighBits(wᵢ), LowBits(wᵢ)+rᵢ)` is the ≥native Module-LWE problem
+> (**computational** privacy, not perfect — see §3.2 and §5b). The "y becomes public afterward" reasoning below
+> is therefore the worst case (the reference path); the deployed default is strictly more conservative. Even so,
+> the one-time / unpredictability disciplines below still apply, because they protect against *nonce reuse*,
+> which is independent of whether `wᵢ` is hidden.
 
 - **Leaking `y` even once recovers the whole key.** The response `z = y + c·s1` is public and the challenge
   `c` is public. Anyone who learns `y` computes `c·s1 = z − y`; since `c` is (with overwhelming probability)
@@ -1414,7 +1443,13 @@ sum) — publishing them is the whole point.
 > signature, never both. The guard state is *not secret*, but it is **integrity- and durability-critical**:
 > losing or rolling it back re-enables nonce reuse.
 
-### Machine-checked: the deployed (public-`wᵢ`) security — and an empirical demonstration
+### Machine-checked: the transcript-exposing (public-`wᵢ`) security — and an empirical demonstration
+
+> **Framing.** The machine-checked bound below is proven for the **worst case** — an oracle that exposes the
+> full transcript *including* `wᵢ` (so the nonce is recoverable). The **deployed default (F-OFFSET) never
+> exposes `wᵢ`**, so it sits strictly *inside* this bound: this is a conservative upper bound that holds *even
+> if* you ran the reference path. F-OFFSET's own hiding (recovery = ≥native Module-LWE) is attested separately
+> (`ml_adsa_F_offset.ec`, `ml_adsa_F_keyonly.ec`; §5b).
 
 Everything in this section is now backed by mechanized proofs, not prose:
 
